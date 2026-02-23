@@ -14,8 +14,8 @@ const Dashboard = () => {
     useEffect(() => {
         // Parallel fetch
         Promise.all([
-            fetch('http://localhost:8000/api/kpis').then(res => res.json()),
-            fetch('http://localhost:8000/api/dashboard/details').then(res => res.json())
+            fetch('/api/kpis').then(res => res.json()),
+            fetch('/api/dashboard/details').then(res => res.json())
         ])
             .then(([kpiData, detailData]) => {
                 setKpis(kpiData);

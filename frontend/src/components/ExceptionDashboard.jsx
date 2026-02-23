@@ -12,9 +12,9 @@ const ExceptionDashboard = ({ onClose }) => {
     useEffect(() => {
         // Fetch all data for the modal
         Promise.all([
-            fetch('http://localhost:8000/api/anomaly/current').then(res => res.json()),
-            fetch('http://localhost:8000/api/anomaly/impact').then(res => res.json()),
-            fetch('http://localhost:8000/api/anomaly/alternatives').then(res => res.json())
+            fetch('/api/anomaly/current').then(res => res.json()),
+            fetch('/api/anomaly/impact').then(res => res.json()),
+            fetch('/api/anomaly/alternatives').then(res => res.json())
         ]).then(([anomalyData, impactData, altData]) => {
             setAnomaly(anomalyData);
             setImpact(impactData);
@@ -26,7 +26,7 @@ const ExceptionDashboard = ({ onClose }) => {
         if (!selectedAlt) return;
         setStatus('approving');
         try {
-            const res = await fetch('http://localhost:8000/api/anomaly/approve', {
+            const res = await fetch('/api/anomaly/approve', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ alternative_id: selectedAlt })
@@ -166,8 +166,8 @@ const ExceptionDashboard = ({ onClose }) => {
                                                 key={alt.id}
                                                 onClick={() => setSelectedAlt(alt.id)}
                                                 className={`p-4 rounded-xl border-2 transition-all cursor-pointer relative ${selectedAlt === alt.id
-                                                        ? 'border-indigo-600 bg-indigo-50/30'
-                                                        : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'
+                                                    ? 'border-indigo-600 bg-indigo-50/30'
+                                                    : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 <div className="flex justify-between items-start mb-2">
@@ -208,8 +208,8 @@ const ExceptionDashboard = ({ onClose }) => {
                                             onClick={handleApprove}
                                             disabled={!selectedAlt || status === 'approving'}
                                             className={`px-6 py-3 rounded-lg font-bold text-sm tracking-wide transition-colors ${!selectedAlt
-                                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200'
+                                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200'
                                                 }`}
                                         >
                                             {status === 'approving' ? 'Authorizing...' : 'Authorize Selected Action'}
