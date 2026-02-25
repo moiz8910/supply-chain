@@ -3,7 +3,7 @@ import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-const KPITile = ({ title, value, unit, target, status, trend, delta }) => {
+const KPITile = ({ title, value, unit, target, status, trend, delta, isSelected, onClick }) => {
     const isPositive = delta?.includes('+');
     const isNegative = delta?.includes('-');
 
@@ -17,7 +17,11 @@ const KPITile = ({ title, value, unit, target, status, trend, delta }) => {
     const theme = colors[status] || colors.warning;
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col justify-between h-40 relative overflow-hidden group hover:shadow-md transition-all">
+        <div
+            onClick={onClick}
+            className={`bg-white rounded-xl shadow-sm border p-5 flex flex-col justify-between h-40 relative overflow-hidden group hover:shadow-md transition-all cursor-pointer ${isSelected ? 'border-indigo-600 ring-1 ring-indigo-600 bg-indigo-50/10' : 'border-gray-100'
+                }`}
+        >
             <div className="relative z-10">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</h3>
 

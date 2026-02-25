@@ -68,10 +68,10 @@ const ExceptionDashboard = ({ onClose }) => {
                     </button>
                 </div>
 
-                <div className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-8 h-full bg-gray-50">
+                <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100%-80px)] overflow-y-auto bg-gray-50">
 
-                    {/* Left Column: Context & Impact */}
-                    <div className="lg:col-span-1 space-y-6">
+                    {/* Top Left: Context & Impact */}
+                    <div className="space-y-6">
                         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Situation Context</h3>
                             <p className="text-gray-800 text-sm leading-relaxed mb-4">{anomaly.description}</p>
@@ -97,31 +97,33 @@ const ExceptionDashboard = ({ onClose }) => {
                             </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Simulated Impact on KPIs</h3>
-                            <div className="space-y-4">
-                                {impact.map((item, idx) => (
-                                    <div key={idx} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0">
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-800">{item.kpi}</p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-xs text-gray-400 line-through">{item.current}</span>
-                                                <ArrowRight className="w-3 h-3 text-gray-300" />
-                                                <span className={`text-sm font-bold ${item.status === 'critical' ? 'text-red-600' : 'text-orange-500'}`}>
-                                                    {item.predicted}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className={`px-2 py-1 rounded text-xs font-bold ${item.status === 'critical' ? 'bg-red-50 text-red-700' : 'bg-orange-50 text-orange-700'}`}>
-                                            {item.delta}
+                    </div>
+
+                    {/* Top Right: Simulated KPIs */}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 h-fit">
+                        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Simulated Impact on KPIs</h3>
+                        <div className="space-y-4">
+                            {impact.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-800">{item.kpi}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-xs text-gray-400 line-through">{item.current}</span>
+                                            <ArrowRight className="w-3 h-3 text-gray-300" />
+                                            <span className={`text-sm font-bold ${item.status === 'critical' ? 'text-red-600' : 'text-orange-500'}`}>
+                                                {item.predicted}
+                                            </span>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                    <div className={`px-2 py-1 rounded text-xs font-bold ${item.status === 'critical' ? 'bg-red-50 text-red-700' : 'bg-orange-50 text-orange-700'}`}>
+                                        {item.delta}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Right Column: Alternatives & Action */}
+                    {/* Bottom Full Width: Alternatives & Action */}
                     <div className="lg:col-span-2 flex flex-col">
                         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex-grow">
 
@@ -160,38 +162,38 @@ const ExceptionDashboard = ({ onClose }) => {
                                         <span className="text-xs font-medium px-2 py-1 bg-blue-50 text-blue-700 rounded-md">DoA Limit: INR 5.0M</span>
                                     </div>
 
-                                    <div className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {alternatives.map((alt) => (
                                             <div
                                                 key={alt.id}
                                                 onClick={() => setSelectedAlt(alt.id)}
-                                                className={`p-4 rounded-xl border-2 transition-all cursor-pointer relative ${selectedAlt === alt.id
-                                                    ? 'border-indigo-600 bg-indigo-50/30'
+                                                className={`p-4 rounded-xl border-2 transition-all cursor-pointer relative flex flex-col ${selectedAlt === alt.id
+                                                    ? 'border-indigo-600 bg-indigo-50/30 shadow-sm'
                                                     : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'
                                                     }`}
                                             >
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="font-bold text-gray-900 text-base">{alt.title}</h4>
-                                                    <span className="text-sm font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded">
+                                                    <h4 className="font-bold text-gray-900 text-base leading-tight pr-4">{alt.title}</h4>
+                                                    <span className="text-sm font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded whitespace-nowrap">
                                                         {alt.cost_impact}
                                                     </span>
                                                 </div>
-                                                <p className="text-sm text-gray-600 mb-3">{alt.description}</p>
+                                                <p className="text-sm text-gray-600 mb-4 flex-grow">{alt.description}</p>
 
-                                                <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-100/60">
+                                                <div className="grid grid-cols-2 gap-3 mt-auto pt-3 border-t border-gray-100/60">
                                                     <div>
                                                         <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1">KPI Impact</span>
-                                                        <span className="text-xs text-gray-700">{alt.kpi_impact}</span>
+                                                        <span className="text-xs text-gray-700 font-medium">{alt.kpi_impact}</span>
                                                     </div>
                                                     <div>
                                                         <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Trade-off</span>
-                                                        <span className="text-xs text-gray-700">{alt.tradeoff}</span>
+                                                        <span className="text-xs text-gray-700 font-medium">{alt.tradeoff}</span>
                                                     </div>
                                                 </div>
 
                                                 {selectedAlt === alt.id && (
-                                                    <div className="absolute top-4 -left-3">
-                                                        <div className="w-6 h-6 bg-indigo-600 rounded-full border-4 border-white flex items-center justify-center">
+                                                    <div className="absolute -top-3 -left-3">
+                                                        <div className="w-6 h-6 bg-indigo-600 rounded-full border-2 border-white flex items-center justify-center shadow-sm">
                                                             <CheckCircle className="w-3 h-3 text-white" />
                                                         </div>
                                                     </div>
