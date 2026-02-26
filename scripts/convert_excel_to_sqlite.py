@@ -14,29 +14,15 @@ def log(msg):
     with open(log_file, 'a', encoding='utf-8') as f:
         f.write(str(msg) + '\n')
 
+import re
+
 def normalize(name):
     if not isinstance(name, str): return str(name)
-    # Remove any non-alphanumeric characters except underscore? 
-    # Also strip common descriptive suffixes found in this specific dataset
     name = name.lower().strip()
     name = name.replace(' ', '_').replace('.', '').replace('-', '_')
     
-    # Strip suffixes like _(primary_key), _(fk), _(natural_key), _(pk)
-    # Be careful not to remove valid parts if they heavily overlap, but these are distinct.
-    suffixes = [
-        '_(primary_key)', '(primary_key)', 
-        '_(foreign_key)', '(foreign_key)',
-        '_(fk)', '(fk)',
-        '_(pk)', '(pk)',
-        '_(natural_key)', '(natural_key)',
-        '_(fk_style)',
-        '_(region_id_fk)',
-        '_(wh_id_fk)', 
-        # Add generic pattern removal if needed, or just specific ones found in logs
-    ]
-    
-    for s in suffixes:
-        name = name.replace(s, '')
+    # Strip any occurrences of _(text_fk) or (pk) or similar metadata suffixes
+    name = re.sub(r'_?\([^)]*\)', '', name)
         
     return name
 
@@ -256,18 +242,23 @@ def convert_excel_to_sqlite(excel_file, db_file):
             cols_def = []
             
             # Columns
+            seen_cols = set()
             for col_name, dtype in df.dtypes.items():
+                original_col_name = col_name
+                counter = 1
+                while col_name in seen_cols:
+                    col_name = f"{original_col_name}_{counter}"
+                    counter += 1
+                seen_cols.add(col_name)
+
                 sql_type = get_sql_type(dtype)
                 
                 # Definition parts
                 parts = [f'"{col_name}"', sql_type]
                 
                 # Check PK
-                if tbl in pks and pks[tbl] == col_name:
+                if tbl in pks and pks[tbl] == original_col_name:
                     parts.append("PRIMARY KEY")
-                
-                # TODO: If this column is referenced but NOT a PK, add UNIQUE logic if needed.
-                # But for now let's hope PK logic is sufficient.
                 
                 cols_def.append(" ".join(parts))
             
@@ -280,6 +271,10 @@ def convert_excel_to_sqlite(excel_file, db_file):
                     
                     # Add FK constraint
                     cols_def.append(f'FOREIGN KEY ("{col}") REFERENCES "{ref_tbl}" ("{ref_col}")')
+
+            if not cols_def:
+                log(f"Skipping table '{tbl}' because no valid columns were found.")
+                continue
 
             create_sql = f'CREATE TABLE "{tbl}" (\n  ' + ',\n  '.join(cols_def) + '\n);'
             

@@ -1,15 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-import asyncio
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-from database import get_db, engine
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
+import re
 
-router = APIRouter(prefix="/api", tags=["kpis"])
+with open('backend/routers/kpi_router.py', 'r') as f:
+    code = f.read()
 
-def get_otif_data(filters=None):
+# Replace get_otif_data
+otif_new = '''def get_otif_data(filters=None):
     if filters is None: filters = {}
     region = filters.get("region", "Global")
     family = filters.get("productFamily", "All Families")
@@ -65,9 +60,10 @@ def get_otif_data(filters=None):
         return round(score, 1), trend_data, trend_label
     except Exception as e:
         print(f"OTIF Error: {e}")
-        return 0.0, [], "N/A"
+        return 0.0, [], "N/A"'''
 
-def get_capacity_utilization(filters=None):
+# Replace get_capacity_utilization
+cap_new = '''def get_capacity_utilization(filters=None):
     if filters is None: filters = {}
     family = filters.get("productFamily", "All Families")
     try:
@@ -120,9 +116,10 @@ def get_capacity_utilization(filters=None):
         return round(score, 1), trend_data, trend_label
     except Exception as e:
         print(f"Capacity Error: {e}")
-        return 85.0, [], "N/A"
+        return 85.0, [], "N/A"'''
 
-def get_backlog_data(filters=None):
+# Replace get_backlog_data
+backlog_new = '''def get_backlog_data(filters=None):
     if filters is None: filters = {}
     region = filters.get("region", "Global")
     family = filters.get("productFamily", "All Families")
@@ -164,88 +161,41 @@ def get_backlog_data(filters=None):
         return round(backlog_val, 2), [], "+$120K WoW"
     except Exception as e:
         print(f"Backlog Error: {e}")
-        return 1.25, [], "N/A"
+        return 1.25, [], "N/A"'''
 
-def get_inventory_days():
-    try:
-        query = "SELECT sum(quantity) as total_qty, sum(inventory_value) as total_val FROM on_hand_inventory"
-        df = pd.read_sql(query, engine)
-        if df.empty or df['total_qty'].iloc[0] is None: return 0.0, [], "N/A"
-        
-        # Simple heuristic: Assuming 10k daily demand across all items to convert stock size to days
-        # In a real app, you'd divide by (annual_COGS / 365)
-        stock_qty = df['total_qty'].iloc[0]
-        days = stock_qty / 15000 
-        return round(days, 1), [], "-1.2d WoW"
-    except Exception as e:
-         return 15.8, [], "N/A"
+code = re.sub(r'def get_otif_data\(\):.*?return 0\.0, \[\], "N/A"', otif_new, code, flags=re.DOTALL)
+code = re.sub(r'def get_capacity_utilization\(\):.*?return 85\.0, \[\], "N/A"', cap_new, code, flags=re.DOTALL)
+code = re.sub(r'def get_backlog_data\(\):.*?return 1\.25, \[\], "N/A"', backlog_new, code, flags=re.DOTALL)
 
-def get_all_kpis(filters=None):
+# get_all_kpis
+all_kpis_old = '''def get_all_kpis():
+    otif_val, otif_trend, otif_lbl = get_otif_data()
+    # Forecast Accuracy (still complex to calculate, doing simple simulated metric here)
+    fa_val, fa_trend, fa_lbl = 78.5, [{"name": "W1", "value": 75}, {"name": "W2", "value": 80}, {"name": "W3", "value": 78}], "-3.1% WoW"
+    
+    inv_val, inv_trend, inv_lbl = get_inventory_days()
+    cap_val, cap_trend, cap_lbl = get_capacity_utilization()
+    bl_val, bl_trend, bl_lbl = get_backlog_data()'''
+all_kpis_new = '''def get_all_kpis(filters=None):
     if filters is None: filters = {}
     otif_val, otif_trend, otif_lbl = get_otif_data(filters)
     fa_val, fa_trend, fa_lbl = 78.5, [{"name": "W1", "value": 75}, {"name": "W2", "value": 80}, {"name": "W3", "value": 78}], "-3.1% WoW"
     inv_val, inv_trend, inv_lbl = get_inventory_days()
     cap_val, cap_trend, cap_lbl = get_capacity_utilization(filters)
-    bl_val, bl_trend, bl_lbl = get_backlog_data(filters)
+    bl_val, bl_trend, bl_lbl = get_backlog_data(filters)'''
+code = code.replace(all_kpis_old, all_kpis_new)
 
-    return [
-        {
-            "id": "otif",
-            "title": "On-Time In-Full (OTIF)",
-            "value": f"{otif_val}%",
-            "unit": "",
-            "target": "Target: 95%",
-            "trend": otif_trend,
-            "status": "success" if otif_val >= 90 else "warning" if otif_val >= 80 else "error",
-            "delta": otif_lbl
-        },
-        {
-            "id": "forecast_accuracy",
-            "title": "Forecast Accuracy",
-            "value": f"{fa_val}%",
-             "unit": "",
-            "target": "Target: 85%",
-            "trend": fa_trend,
-            "status": "warning",
-            "delta": fa_lbl
-        },
-         {
-            "id": "inventory_days",
-            "title": "Inventory Days",
-            "value": str(inv_val),
-            "unit": "Days",
-            "target": "Target: < 12 Days",
-            "trend": inv_trend,
-            "status": "error",
-            "delta": inv_lbl
-        },
-         {
-            "id": "capacity",
-            "title": "Manufacturing Capacity",
-            "value": f"{cap_val}%",
-            "unit": "",
-            "target": "Target: 85%",
-            "trend": cap_trend,
-            "status": "success",
-            "delta": cap_lbl
-        },
-        {
-            "id": "backlog",
-            "title": "Order Backlog",
-            "value": f"${bl_val}M",
-             "unit": "",
-            "target": "Target: <$750K",
-            "trend": bl_trend,
-            "status": "error",
-            "delta": bl_lbl
-        }
-    ]
-
-@router.get("/kpis")
-def read_kpis(db: Session = Depends(get_db)):
-    return get_all_kpis()
-
-@router.get("/dashboard/filters")
+websocket_old = '''@router.websocket("/ws/kpis")
+async def websocket_kpis(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            data = get_all_kpis()
+            await websocket.send_json(data)
+            await asyncio.sleep(3) # Push updates every 3 seconds for real-time feel
+    except WebSocketDisconnect:
+        pass'''
+websocket_new = '''@router.get("/dashboard/filters")
 def get_dashboard_filters(db: Session = Depends(get_db)):
     try:
         regions = pd.read_sql('SELECT DISTINCT customer_region_id FROM customers', engine)['customer_region_id'].dropna().tolist()
@@ -273,52 +223,9 @@ async def websocket_kpis(websocket: WebSocket):
             await websocket.send_json(data)
             await asyncio.sleep(3) # Push updates every 3 seconds for real-time feel
     except WebSocketDisconnect:
-        pass
+        pass'''
+code = code.replace(websocket_old, websocket_new)
 
-@router.get("/dashboard/details")
-def get_dashboard_details(db: Session = Depends(get_db)):
-    # Main Chart: Forecast Accuracy Trend (12 Months)
-    # Simulated for smooth visual
-    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    main_chart = [
-        {"name": m, "Accuracy": 80 + (i%3)*5 - (i%2)*3} for i, m in enumerate(months)
-    ]
-    
-    # Breakdown by Region
-    breakdown = [
-        {"name": "North America", "value": 45, "fill": "#2563eb"}, # Blue
-        {"name": "Europe", "value": 30, "fill": "#16a34a"}, # Green
-        {"name": "Asia", "value": 25, "fill": "#ea580c"}, # Orange
-    ]
-    
-    # Contributors
-    contributors = [
-        {"name": "High Demand Variability", "value": "-2.1%", "type": "negative"},
-        {"name": "Supplier Delays", "value": "-0.8%", "type": "negative"},
-        {"name": "Incorrect Data Inputs", "value": "-0.6%", "type": "negative"},
-    ]
-    
-    # Recent Orders (Table)
-    try:
-        query = """
-        SELECT o.order_id, oli.quantity as sku, o.order_status as status, o.order_date as date
-        FROM orders o
-        JOIN order_line_items oli ON o.order_id = oli.order_id
-        ORDER BY o.order_date DESC
-        LIMIT 5
-        """
-        df = pd.read_sql(query, engine)
-        recent_orders = df.to_dict(orient='records')
-        # Add 'Customer' mock? or join
-        for o in recent_orders:
-            o['customer'] = "Key Account" # Placeholder
-            o['action'] = "View"
-    except:
-        recent_orders = []
-
-    return {
-        "main_chart": main_chart,
-        "breakdown": breakdown,
-        "contributors": contributors,
-        "recent_orders": recent_orders
-    }
+with open('backend/routers/kpi_router.py', 'w') as f:
+    f.write(code)
+print('KPI router updated with python text replace successfully')

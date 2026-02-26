@@ -12,20 +12,54 @@ const Dashboard = () => {
     const [timePeriod, setTimePeriod] = useState('Last 30 Days');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
+    const [region, setRegion] = useState('Global');
+    const [productFamily, setProductFamily] = useState('All Families');
+    const [filterOptions, setFilterOptions] = useState({ regions: ['Global'], product_families: ['All Families'] });
 
     useEffect(() => {
-        // Parallel fetch
-        Promise.all([
-            fetch('/api/kpis').then(res => res.json()),
-            fetch('/api/dashboard/details').then(res => res.json())
-        ])
-            .then(([kpiData, detailData]) => {
-                setKpis(kpiData);
+        // Fetch initial static details (like chart/table mocks)
+        fetch('/api/dashboard/details')
+            .then(res => res.json())
+            .then(detailData => {
                 setDetails(detailData);
-                setLoading(false);
             })
-            .catch(err => console.error(err));
+            .catch(err => console.error('Error fetching details:', err));
+
+        // Fetch dynamic filter options from DB
+        fetch('/api/dashboard/filters')
+            .then(res => res.json())
+            .then(data => setFilterOptions(data))
+            .catch(err => console.error('Error fetching filters:', err));
     }, []);
+
+    useEffect(() => {
+        // Connect to Real-time WebSocket Data Stream for KPIs
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/ws/kpis`;
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            console.log('Connected to live KPI stream');
+            ws.send(JSON.stringify({ timePeriod, customStartDate, customEndDate, region, productFamily }));
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            setKpis(data);
+            setLoading(false);
+        };
+
+        ws.onerror = (err) => {
+            console.error('WebSocket Error:', err);
+            // Fallback to REST API if WebSocket fails
+            fetch('/api/kpis').then(res => res.json()).then(data => {
+                setKpis(data);
+                setLoading(false);
+            });
+        };
+
+        return () => ws.close(); // Clean up on unmount
+    }, [timePeriod, customStartDate, customEndDate, region, productFamily]);
 
     if (loading) return <div className="flex h-screen items-center justify-center bg-gray-50 text-gray-400">Loading Dashboard...</div>;
 
@@ -68,20 +102,22 @@ const Dashboard = () => {
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                         <span className="font-medium text-gray-600">Region:</span>
-                        <select className="bg-gray-100 border-0 outline-none px-3 py-1.5 rounded-md text-gray-700 font-semibold cursor-pointer hover:bg-gray-200 focus:ring-2 focus:ring-indigo-500 transition-all text-sm">
-                            <option>Global</option>
-                            <option>North America</option>
-                            <option>EMEA</option>
-                            <option>APAC</option>
+                        <select
+                            value={region}
+                            onChange={(e) => setRegion(e.target.value)}
+                            className="bg-gray-100 border-0 outline-none px-3 py-1.5 rounded-md text-gray-700 font-semibold cursor-pointer hover:bg-gray-200 focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                        >
+                            {filterOptions.regions.map(r => <option key={r} value={r}>{r}</option>)}
                         </select>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                         <span className="font-medium text-gray-600">Product Family:</span>
-                        <select className="bg-gray-100 border-0 outline-none px-3 py-1.5 rounded-md text-gray-700 font-semibold cursor-pointer hover:bg-gray-200 focus:ring-2 focus:ring-indigo-500 transition-all text-sm">
-                            <option>All Families</option>
-                            <option>Electronics</option>
-                            <option>Apparel</option>
-                            <option>Home Goods</option>
+                        <select
+                            value={productFamily}
+                            onChange={(e) => setProductFamily(e.target.value)}
+                            className="bg-gray-100 border-0 outline-none px-3 py-1.5 rounded-md text-gray-700 font-semibold cursor-pointer hover:bg-gray-200 focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
+                        >
+                            {filterOptions.product_families.map(f => <option key={f} value={f}>{f}</option>)}
                         </select>
                     </div>
                 </div>
