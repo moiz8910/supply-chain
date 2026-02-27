@@ -1,5 +1,4 @@
 import React from 'react';
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -7,26 +6,17 @@ const KPITile = ({ title, value, unit, target, status, trend, delta, isSelected,
     const isPositive = delta?.includes('+');
     const isNegative = delta?.includes('-');
 
-    // Colors based on Status (Good/Bad) match design (Green/Red/Amber)
-    const colors = {
-        success: { text: 'text-green-700', stroke: '#15803d', fill: '#dcfce7' },
-        warning: { text: 'text-yellow-600', stroke: '#ca8a04', fill: '#fef9c3' },
-        error: { text: 'text-red-600', stroke: '#dc2626', fill: '#fee2e2' },
-    };
-
-    const theme = colors[status] || colors.warning;
-
     return (
         <div
             onClick={onClick}
-            className={`bg-white rounded-xl shadow-sm border p-5 flex flex-col justify-between h-40 relative overflow-hidden group hover:shadow-md transition-all cursor-pointer ${isSelected ? 'border-indigo-600 ring-1 ring-indigo-600 bg-indigo-50/10' : 'border-gray-100'
+            className={`bg-white rounded-xl shadow-sm border p-4 flex flex-col justify-between h-28 relative overflow-hidden group hover:shadow-md transition-all cursor-pointer ${isSelected ? 'border-indigo-600 ring-1 ring-indigo-600 bg-indigo-50/10' : 'border-gray-100'
                 }`}
         >
             <div className="relative z-10">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{title}</h3>
+                <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide truncate">{title}</h3>
 
-                <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-gray-900">{value}</span>
+                <div className="mt-1 flex items-baseline gap-1.5">
+                    <span className="text-2xl font-bold text-gray-900">{value}</span>
                     {unit && <span className="text-sm text-gray-500 font-medium">{unit}</span>}
 
                     <div className={cn("flex items-center text-xs font-bold ml-1 px-1.5 py-0.5 rounded-full bg-gray-50",
@@ -36,29 +26,9 @@ const KPITile = ({ title, value, unit, target, status, trend, delta, isSelected,
                     </div>
                 </div>
 
-                <p className="text-xs text-gray-400 mt-1 font-medium">{target}</p>
+                <p className="text-[11px] text-gray-500 mt-0.5 font-medium">{target}</p>
             </div>
 
-            {/* Sparkline at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-16 opacity-50 group-hover:opacity-100 transition-opacity">
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={trend}>
-                        <defs>
-                            <linearGradient id={`grad-${title}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor={theme.stroke} stopOpacity={0.2} />
-                                <stop offset="100%" stopColor={theme.stroke} stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        <Area
-                            type="monotone"
-                            dataKey="value"
-                            stroke={theme.stroke}
-                            strokeWidth={2}
-                            fill={`url(#grad-${title})`}
-                        />
-                    </AreaChart>
-                </ResponsiveContainer>
-            </div>
         </div>
     );
 };

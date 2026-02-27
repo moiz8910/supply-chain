@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, X, ArrowRight, CheckCircle, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, X, ArrowRight, CheckCircle, Clock, Settings2 } from 'lucide-react';
 
 const ExceptionDashboard = ({ onClose }) => {
+    const navigate = useNavigate();
     const [anomaly, setAnomaly] = useState(null);
     const [impact, setImpact] = useState(null);
     const [alternatives, setAlternatives] = useState(null);
@@ -162,37 +164,45 @@ const ExceptionDashboard = ({ onClose }) => {
                                         <span className="text-xs font-medium px-2 py-1 bg-blue-50 text-blue-700 rounded-md">DoA Limit: INR 5.0M</span>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="flex flex-col gap-4">
                                         {alternatives.map((alt) => (
                                             <div
                                                 key={alt.id}
                                                 onClick={() => setSelectedAlt(alt.id)}
-                                                className={`p-4 rounded-xl border-2 transition-all cursor-pointer relative flex flex-col ${selectedAlt === alt.id
+                                                className={`p-5 rounded-xl border-2 transition-all cursor-pointer relative flex flex-col md:flex-row md:items-center gap-6 ${selectedAlt === alt.id
                                                     ? 'border-indigo-600 bg-indigo-50/30 shadow-sm'
                                                     : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'
                                                     }`}
                                             >
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="font-bold text-gray-900 text-base leading-tight pr-4">{alt.title}</h4>
-                                                    <span className="text-sm font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded whitespace-nowrap">
-                                                        {alt.cost_impact}
-                                                    </span>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-bold text-gray-900 text-base leading-tight mb-1">{alt.title}</h4>
+                                                    <p className="text-sm text-gray-600">{alt.description}</p>
                                                 </div>
-                                                <p className="text-sm text-gray-600 mb-4 flex-grow">{alt.description}</p>
 
-                                                <div className="grid grid-cols-2 gap-3 mt-auto pt-3 border-t border-gray-100/60">
-                                                    <div>
-                                                        <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1">KPI Impact</span>
-                                                        <span className="text-xs text-gray-700 font-medium">{alt.kpi_impact}</span>
+                                                <div className="flex flex-wrap md:flex-nowrap items-start gap-6 md:pl-6 md:border-l md:border-gray-200/60 shrink-0">
+                                                    <div className="w-auto md:w-36">
+                                                        <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Cost Impact</span>
+                                                        <span className="inline-block text-sm font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded break-words">{alt.cost_impact}</span>
                                                     </div>
-                                                    <div>
+                                                    <div className="w-auto md:w-40">
+                                                        <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1">KPI Impact</span>
+                                                        <span className="text-xs text-gray-700 font-medium leading-relaxed block">{alt.kpi_impact}</span>
+                                                    </div>
+                                                    <div className="w-auto md:w-48">
                                                         <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Trade-off</span>
-                                                        <span className="text-xs text-gray-700 font-medium">{alt.tradeoff}</span>
+                                                        <span className="text-xs text-gray-700 font-medium leading-relaxed block">{alt.tradeoff}</span>
                                                     </div>
                                                 </div>
 
                                                 {selectedAlt === alt.id && (
-                                                    <div className="absolute -top-3 -left-3">
+                                                    <div className="absolute top-1/2 -translate-y-1/2 -left-3 hidden md:block">
+                                                        <div className="w-6 h-6 bg-indigo-600 rounded-full border-2 border-white flex items-center justify-center shadow-sm">
+                                                            <CheckCircle className="w-3 h-3 text-white" />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {selectedAlt === alt.id && (
+                                                    <div className="absolute -top-3 -left-3 md:hidden">
                                                         <div className="w-6 h-6 bg-indigo-600 rounded-full border-2 border-white flex items-center justify-center shadow-sm">
                                                             <CheckCircle className="w-3 h-3 text-white" />
                                                         </div>
@@ -206,16 +216,27 @@ const ExceptionDashboard = ({ onClose }) => {
                                         <p className="text-xs text-gray-500 max-w-sm">
                                             By authorizing, you approve the selected cost implication and trigger automated supplier and customer communications.
                                         </p>
-                                        <button
-                                            onClick={handleApprove}
-                                            disabled={!selectedAlt || status === 'approving'}
-                                            className={`px-6 py-3 rounded-lg font-bold text-sm tracking-wide transition-colors ${!selectedAlt
-                                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200'
-                                                }`}
-                                        >
-                                            {status === 'approving' ? 'Authorizing...' : 'Authorize Selected Action'}
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => {
+                                                    onClose();
+                                                    navigate('/optimizer');
+                                                }}
+                                                className="px-6 py-3 rounded-lg font-bold text-sm tracking-wide transition-colors bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                            >
+                                                <Settings2 className="w-4 h-4" /> Go to Optimizer
+                                            </button>
+                                            <button
+                                                onClick={handleApprove}
+                                                disabled={!selectedAlt || status === 'approving'}
+                                                className={`px-6 py-3 rounded-lg font-bold text-sm tracking-wide transition-colors ${!selectedAlt
+                                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200'
+                                                    }`}
+                                            >
+                                                {status === 'approving' ? 'Authorizing...' : 'Authorize Selected Action'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </>
                             )}

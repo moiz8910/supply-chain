@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Filter, Search, UserPlus } from 'lucide-react';
 
 const mockTasks = [
@@ -45,7 +46,15 @@ const mockTasks = [
 ];
 
 const TasksScreen = () => {
-    const [filter, setFilter] = useState('My Tasks');
+    const [filter, setFilter] = useState('All Tasks');
+    const navigate = useNavigate();
+
+    const filteredTasks = mockTasks.filter(task => {
+        if (filter === 'All Tasks') return true;
+        if (filter === 'My Tasks') return task.owner === 'Me';
+        if (filter === 'Team Tasks') return task.owner !== 'Me';
+        return true;
+    });
 
     return (
         <div className="h-full flex flex-col bg-gray-50">
@@ -56,7 +65,7 @@ const TasksScreen = () => {
                     <p className="text-sm text-gray-500 mt-1">Unified worklist for system-generated actions and approvals.</p>
                 </div>
                 <div className="flex bg-gray-100 p-1 rounded-lg">
-                    {['My Tasks', 'Team Tasks', 'Overdue'].map(f => (
+                    {['All Tasks', 'My Tasks', 'Team Tasks'].map(f => (
                         <button
                             key={f}
                             onClick={() => setFilter(f)}
@@ -126,17 +135,34 @@ const TasksScreen = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {mockTasks.map(task => (
-                                <tr key={task.id} className="hover:bg-gray-50 transition-colors group">
+                            {filteredTasks.map(task => (
+                                <tr
+                                    key={task.id}
+                                    onClick={() => {
+                                        if (task.type === 'Exception Approval' && task.title.includes('EX-')) {
+                                            const match = task.title.match(/EX-\d+/);
+                                            if (match) {
+                                                navigate(`/exceptions/${match[0]}`);
+                                                return;
+                                            }
+                                        }
+                                        navigate(`/tasks/${task.id}`);
+                                    }}
+                                    className="hover:bg-gray-50 transition-colors group cursor-pointer"
+                                >
                                     <td className="px-6 py-4">
                                         <div className="flex items-start gap-3">
                                             <div className="mt-1">
-                                                <input type="checkbox" className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" />
+                                                <input
+                                                    type="checkbox"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                                                />
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${task.priority === 'Critical' ? 'bg-red-100 text-red-700' :
-                                                            task.priority === 'High' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
+                                                        task.priority === 'High' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
                                                         }`}>{task.priority}</span>
                                                     <span className="text-xs font-semibold text-gray-500">{task.id}</span>
                                                 </div>
@@ -148,17 +174,19 @@ const TasksScreen = () => {
                                     <td className="px-6 py-4 text-sm text-gray-600">{task.type}</td>
                                     <td className="px-6 py-4">
                                         <div className={`flex items-center gap-1.5 text-sm font-semibold ${task.due === 'Overdue' ? 'text-red-600' :
-                                                task.due.includes('Hours') ? 'text-orange-500' : 'text-gray-600'
+                                            task.due.includes('Hours') ? 'text-orange-500' : 'text-gray-600'
                                             }`}>
                                             <Clock size={14} /> {task.due}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center justify-end gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div
+                                            className="flex items-center justify-end gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
                                             <button title="Accept / Approve" className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"><CheckCircle size={18} /></button>
                                             <button title="Reject" className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"><XCircle size={18} /></button>
                                             <button title="Re-assign" className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"><UserPlus size={18} /></button>
-                                            <button title="Open Context" className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors ml-2 border border-gray-200"><ArrowRight size={16} /></button>
                                         </div>
                                     </td>
                                 </tr>
