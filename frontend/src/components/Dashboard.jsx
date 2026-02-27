@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import KPITile from './KPITile';
 import MainChart from './MainChart';
 import Contributors from './Contributors';
-import { Search, Bell, HelpCircle, User } from 'lucide-react';
+import { Bell, User, Sparkles, Settings2, X, Check } from 'lucide-react';
 
 const Dashboard = () => {
     const [kpis, setKpis] = useState([]);
@@ -15,6 +15,37 @@ const Dashboard = () => {
     const [region, setRegion] = useState('Global');
     const [productFamily, setProductFamily] = useState('All Families');
     const [filterOptions, setFilterOptions] = useState({ regions: ['Global'], product_families: ['All Families'] });
+
+    const [selectedKpiKeys, setSelectedKpiKeys] = useState(() => {
+        const saved = localStorage.getItem('selectedKpis');
+        return saved ? JSON.parse(saved) : [
+            'supplier_otifq', 'rm_cost_per_unit', 'inbound_transport_cost',
+            'avg_transit_time_rm', 'inventory_days_cover', 'production_cost'
+        ];
+    });
+    const [showCustomizer, setShowCustomizer] = useState(false);
+    const [tempSelectedKeys, setTempSelectedKeys] = useState([]);
+
+    const renderExplanation = (kpi) => {
+        if (!kpi) return null;
+
+        switch (kpi.title) {
+            case 'On-Time In-Full (OTIF)':
+                return `OTIF shifted by ${kpi.delta}. The primary driver was a 15% increase in port congestion at Shanghai, delaying 42 key shipments. Carrier unreliability in the APAC region contributed an additional 4% negative impact.`;
+            case 'Forecast Accuracy':
+                return `Forecast accuracy changed by ${kpi.delta}. Increased demand volatility in the Electronics segment outpaced our predictive models. Supplier material shortages caused an unpredicted 8% drop in fulfillment capability.`;
+            case 'Inventory Days':
+                return `Inventory days changed by ${kpi.delta}. We are holding excess raw materials (Chemicals) due to a sudden drop in Q3 manufacturing orders, tying up working capital unnecessarily.`;
+            case 'Manufacturing Capacity':
+                return `Capacity utilization changed ${kpi.delta}. Plant A experienced a 3-day unplanned downtime event affecting the Specialty line, while Plant B is over-performing by 4% to compensate.`;
+            case 'Freight Cost per Unit':
+                return `Freight costs moved ${kpi.delta}. Expedited air freight usage spiked by 22% this week to bypass the ongoing ocean freight constraints, directly inflating the per-unit average.`;
+            case 'Order Backlog':
+                return `Backlog ${kpi.delta}. The recent spike in North American demand exceeded local warehouse safety stock, pushing 120 new orders into the backlog queue.`;
+            default:
+                return `Performance changed by ${kpi.delta}. Multiple underlying factors across the supply chain contributed to this recent shift in metric stability.`;
+        }
+    };
 
     useEffect(() => {
         // Fetch initial static details (like chart/table mocks)
@@ -121,10 +152,16 @@ const Dashboard = () => {
                         </select>
                     </div>
                 </div>
+
                 <div className="flex items-center gap-4 text-gray-400">
-                    <Search size={20} className="hover:text-gray-600 cursor-pointer" />
+                    <button
+                        onClick={() => { setTempSelectedKeys(selectedKpiKeys); setShowCustomizer(true); }}
+                        className="flex items-center gap-1.5 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200 px-3 py-1.5 rounded-lg transition-all mr-2 shadow-sm"
+                    >
+                        <Settings2 size={16} />
+                        Customize KPIs
+                    </button>
                     <Bell size={20} className="hover:text-gray-600 cursor-pointer" />
-                    <HelpCircle size={20} className="hover:text-gray-600 cursor-pointer" />
                     <User size={24} className="text-gray-600 bg-gray-200 rounded-full p-1" />
                 </div>
             </div>
@@ -132,8 +169,8 @@ const Dashboard = () => {
             <div className="p-6 max-w-[1600px] mx-auto space-y-6">
 
                 {/* KPI Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {kpis.map(kpi => (
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+                    {kpis.filter(k => selectedKpiKeys.includes(k.id)).slice(0, 6).map(kpi => (
                         <KPITile
                             key={kpi.id}
                             {...kpi}
@@ -186,11 +223,96 @@ const Dashboard = () => {
                                 />
                             </div>
                         </div>
+
+                        {/* Bottom: AI Causal Analysis */}
+                        <div className="mt-6 bg-indigo-50/50 p-6 rounded-xl border border-indigo-100 shadow-sm">
+                            <h4 className="text-indigo-900 font-bold mb-2 flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-indigo-600" />
+                                AI Causal Analysis
+                            </h4>
+                            <p className="text-sm text-indigo-800/80 leading-relaxed font-medium">
+                                {renderExplanation(kpis.find(k => k.id === selectedKpiId))}
+                            </p>
+                        </div>
                     </div>
                 )}
 
 
             </div>
+
+            {/* Customizer Modal */}
+            {showCustomizer && (
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">Customize Dashboard KPIs</h3>
+                                <p className="text-sm text-gray-500 mt-1">Select exactly 6 KPIs to display on your main dashboard.</p>
+                            </div>
+                            <button onClick={() => setShowCustomizer(false)} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 max-h-[60vh] overflow-y-auto bg-gray-50/50">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {kpis.map(kpi => {
+                                    const isSelected = tempSelectedKeys.includes(kpi.id);
+                                    return (
+                                        <div
+                                            key={kpi.id}
+                                            onClick={() => {
+                                                if (isSelected) {
+                                                    setTempSelectedKeys(prev => prev.filter(id => id !== kpi.id));
+                                                } else {
+                                                    if (tempSelectedKeys.length < 6) {
+                                                        setTempSelectedKeys(prev => [...prev, kpi.id]);
+                                                    }
+                                                }
+                                            }}
+                                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${isSelected ? 'border-indigo-600 bg-indigo-50/40 shadow-sm' : 'border-gray-200 bg-white hover:border-indigo-200 hover:shadow-sm'}`}
+                                        >
+                                            <span className={`text-sm font-bold ${isSelected ? 'text-indigo-900' : 'text-gray-700'}`}>{kpi.title}</span>
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300'}`}>
+                                                {isSelected && <Check size={14} strokeWidth={3} />}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-between">
+                            <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg">
+                                <span className={tempSelectedKeys.length === 6 ? 'text-green-600' : 'text-indigo-600'}>
+                                    {tempSelectedKeys.length}
+                                </span>
+                                /6 Selected
+                            </span>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowCustomizer(false)}
+                                    className="px-5 py-2.5 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    disabled={tempSelectedKeys.length !== 6}
+                                    onClick={() => {
+                                        setSelectedKpiKeys(tempSelectedKeys);
+                                        localStorage.setItem('selectedKpis', JSON.stringify(tempSelectedKeys));
+                                        setShowCustomizer(false);
+                                    }}
+                                    className="px-5 py-2.5 rounded-lg text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-2"
+                                >
+                                    <Check size={16} />
+                                    Save Configuration
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

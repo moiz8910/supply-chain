@@ -5,6 +5,7 @@ import MainLayout from './components/MainLayout';
 import ExceptionsScreen from './components/ExceptionsScreen';
 import NetworkMapScreen from './components/NetworkMapScreen';
 import TasksScreen from './components/TasksScreen';
+import TaskDetailScreen from './components/TaskDetailScreen';
 import OptimizerScreen from './components/OptimizerScreen';
 
 function App() {
@@ -14,8 +15,10 @@ function App() {
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="exceptions" element={<ExceptionsScreen />} />
+          <Route path="exceptions/:exceptionId" element={<ExceptionsScreen />} />
           <Route path="map" element={<NetworkMapScreen />} />
           <Route path="tasks" element={<TasksScreen />} />
+          <Route path="tasks/:taskId" element={<TaskDetailScreen />} />
           <Route path="optimizer" element={<OptimizerScreen />} />
         </Route>
       </Routes>
