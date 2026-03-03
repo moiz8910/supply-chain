@@ -99,7 +99,11 @@ const ExceptionCard = ({ data, onClick, isSelected }) => (
                     <User size={12} /> {data.owner}
                 </div>
                 <span className={`px-2 py-0.5 rounded-full ${data.status === 'Open' ? 'bg-gray-100 text-gray-600' :
-                    data.status === 'Investigating' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                        data.status === 'Investigating' ? 'bg-blue-100 text-blue-700' :
+                            data.status === 'Mitigating' ? 'bg-purple-100 text-purple-700' :
+                                data.status === 'Monitoring' ? 'bg-teal-100 text-teal-700' :
+                                    data.status === 'Resolved' ? 'bg-green-100 text-green-700' :
+                                        'bg-gray-100 text-gray-600'
                     }`}>{data.status}</span>
             </div>
         </div>
@@ -113,6 +117,33 @@ const ExceptionsScreen = () => {
     const [showEvidence, setShowEvidence] = useState(false);
     const [severityFilter, setSeverityFilter] = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
+    const [showArchived, setShowArchived] = useState(false);
+    const [exceptions, setExceptions] = useState(mockExceptions); // Initialize with mock, overridden by live data
+
+    useEffect(() => {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/ws/exceptions`;
+        let ws;
+        let retryTimer;
+
+        const connect = () => {
+            ws = new WebSocket(wsUrl);
+            ws.onopen = () => console.log('Connected to live exceptions stream');
+            ws.onmessage = (event) => setExceptions(JSON.parse(event.data));
+            ws.onclose = () => {
+                console.log('Exceptions socket closed. Reconnecting...');
+                retryTimer = setTimeout(connect, 3000);
+            };
+            ws.onerror = (err) => console.error('Exceptions WebSocket Error:', err);
+        };
+
+        connect();
+
+        return () => {
+            if (retryTimer) clearTimeout(retryTimer);
+            if (ws) ws.close();
+        };
+    }, []);
 
     useEffect(() => {
         if (exceptionId) {
@@ -126,13 +157,19 @@ const ExceptionsScreen = () => {
         navigate(`/exceptions/${id}`, { replace: true });
     };
 
-    const filteredExceptions = mockExceptions.filter(exc => {
+    const filteredExceptions = exceptions.filter(exc => {
+        if (showArchived) {
+            if (exc.status !== 'Resolved') return false;
+        } else {
+            if (exc.status === 'Resolved') return false;
+        }
+
         if (severityFilter !== 'All' && exc.severity !== severityFilter) return false;
         if (statusFilter !== 'All' && exc.status !== statusFilter) return false;
         return true;
     });
 
-    const selectedException = selectedId ? mockExceptions.find(e => e.id === selectedId) : null;
+    const selectedException = selectedId ? exceptions.find(e => e.id === selectedId) : null;
 
     return (
         <div className="h-full flex flex-col">
@@ -151,6 +188,12 @@ const ExceptionsScreen = () => {
                                 <span className="text-sm font-bold text-gray-700">Inbox Filters</span>
                                 <span className="text-xs font-medium text-gray-500">{filteredExceptions.length} items</span>
                             </div>
+                            <button
+                                onClick={() => setShowArchived(!showArchived)}
+                                className={`w-full text-xs font-bold py-1.5 px-3 rounded-lg border flex items-center justify-center transition-colors ${showArchived ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                {showArchived ? 'View Active Exceptions' : 'View Archived (Resolved)'}
+                            </button>
                             <div className="flex gap-2">
                                 <select
                                     value={severityFilter}
@@ -162,17 +205,19 @@ const ExceptionsScreen = () => {
                                     <option value="Medium">Medium</option>
                                     <option value="Low">Low</option>
                                 </select>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="flex-1 bg-gray-50 border border-gray-200 text-gray-700 text-xs rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
-                                >
-                                    <option value="All">All Statuses</option>
-                                    <option value="Open">Open</option>
-                                    <option value="Investigating">Investigating</option>
-                                    <option value="Mitigating">Mitigating</option>
-                                    <option value="Resolved">Resolved</option>
-                                </select>
+                                {!showArchived && (
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                        className="flex-1 bg-gray-50 border border-gray-200 text-gray-700 text-xs rounded-lg px-2 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                                    >
+                                        <option value="All">All Statuses</option>
+                                        <option value="Open">Open</option>
+                                        <option value="Investigating">Investigating</option>
+                                        <option value="Mitigating">Mitigating</option>
+                                        <option value="Monitoring">Monitoring</option>
+                                    </select>
+                                )}
                             </div>
                         </div>
                     </div>
