@@ -17,11 +17,24 @@ const MainChart = ({ data, title }) => {
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 12 }} domain={[50, 100]} />
+                        <XAxis
+                            dataKey="name"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#9ca3af', fontSize: 11 }}
+                            dy={10}
+                            tickFormatter={(value) => value.length > 12 ? `${value.substring(0, 12)}...` : value}
+                        />
+                        <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#9ca3af', fontSize: 11 }}
+                            domain={['auto', 'auto']}
+                        />
                         <Tooltip
                             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             cursor={{ stroke: '#e5e7eb', strokeWidth: 1 }}
+                            formatter={(value) => [typeof value === 'number' ? parseFloat(value).toFixed(1) : value, 'Value']}
                         />
                         <Area type="monotone" dataKey="Accuracy" stroke="#ca8a04" strokeWidth={2} fillOpacity={1} fill="url(#colorAccuracy)" />
                     </AreaChart>

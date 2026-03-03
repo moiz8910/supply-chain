@@ -82,7 +82,7 @@ const TasksScreen = () => {
             <div className="flex-1 overflow-auto p-8">
 
                 {/* Metric Summary */}
-                <div className="grid grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-3 gap-4 mb-8">
                     <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
                         <div>
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Pending</p>
@@ -99,17 +99,10 @@ const TasksScreen = () => {
                     </div>
                     <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
                         <div>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">SLA Risk</p>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Overdue Risk</p>
                             <p className="text-2xl font-bold text-orange-500 mt-1">3</p>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center"><Clock size={20} /></div>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Avg Lead Time</p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">14 Hrs</p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><CheckCircle size={20} /></div>
                     </div>
                 </div>
 
@@ -130,7 +123,7 @@ const TasksScreen = () => {
                             <tr>
                                 <th className="px-6 py-4">Task Details</th>
                                 <th className="px-6 py-4">Type</th>
-                                <th className="px-6 py-4">SLA Countdown</th>
+                                <th className="px-6 py-4">Action due by</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
