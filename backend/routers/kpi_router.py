@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
 import asyncio
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -443,11 +443,71 @@ async def websocket_kpis(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
+@router.websocket("/ws/exceptions")
+async def websocket_exceptions(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            query = "SELECT * FROM exceptions ORDER BY exception_id DESC LIMIT 50"
+            df = pd.read_sql(query, engine)
+            
+            exceptions_list = []
+            if not df.empty:
+                for _, row in df.iterrows():
+                    # Format severity and status for UI compatibility
+                    sev = str(row.get('severity_level', 'Medium')).title()
+                    if sev not in ['High', 'Medium', 'Low']: sev = 'Medium'
+                    
+                    status = str(row.get('current_status', 'Open')).title()
+                    if status not in ['Open', 'Investigating', 'Mitigating', 'Resolved', 'Monitoring']: status = 'Open'
+                    
+                    exceptions_list.append({
+                        "id": str(row.get('exception_id', '')),
+                        "title": str(row.get('root_cause_hypotheses', 'System Alert')).split('.')[0],
+                        "type": str(row.get('exception_type', 'General')),
+                        "severity": sev,
+                        "timeframe": str(row.get('time_horizon', 'Today')),
+                        "impacted": str(row.get('impacted_entities', 'Unknown')),
+                        "kpi_impact": str(row.get('impacted_kpis', 'N/A')),
+                        "probability": f"{int(float(row.get('probability', 0.5)) * 100)}%" if pd.notnull(row.get('probability')) else "50%",
+                        "status": status,
+                        "owner": str(row.get('alerted_stakeholders', 'Unassigned')).split(',')[0],
+                        "due": "24 Hrs"
+                    })
+                    
+            await websocket.send_json(exceptions_list)
+            await asyncio.sleep(3)
+    except WebSocketDisconnect:
+        pass
+
+# Establish dynamic 'now' based on mock DB on module load
+global_max_date = pd.read_sql("SELECT MAX(actual_start_date) FROM shipments", engine).iloc[0,0]
+if not global_max_date: global_max_date = pd.Timestamp.now().strftime('%Y-%m-%d')
+global_max_date = str(global_max_date)[:10]
+
 @router.get("/dashboard/details")
-def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)", db: Session = Depends(get_db)):
+def get_dashboard_details(
+    kpi_id: str = None, 
+    dimension: str = "Time (Monthly)", 
+    timePeriod: str = Query("Last 30 Days"),
+    customStartDate: str = Query(""),
+    customEndDate: str = Query(""),
+    region: str = Query("Global"),
+    productFamily: str = Query("All Families"),
+    db: Session = Depends(get_db)):
+    
     main_chart = []
     contributors = []
     chart_title = "Trend Analysis"
+
+    def get_time_sql(date_col):
+        if timePeriod == "Last 30 Days": return f" AND {date_col} >= date('{global_max_date}', '-30 days')"
+        if timePeriod == "Last Quarter": return f" AND {date_col} >= date('{global_max_date}', '-90 days')"
+        if timePeriod == "Year to Date": return f" AND strftime('%Y', {date_col}) = strftime('%Y', '{global_max_date}')"
+        if timePeriod == "Last 12 Months": return f" AND {date_col} >= date('{global_max_date}', '-365 days')"
+        if timePeriod == "Custom Range" and customStartDate and customEndDate: return f" AND {date_col} >= '{customStartDate}' AND {date_col} <= '{customEndDate}'"
+        return ""
+
     
     try:
         if kpi_id == "supplier_otifq":
@@ -458,16 +518,13 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                 chart_title = "Supplier OTIFQ by Supplier"
                 dim_col = "s.from_supplier_id"
             else:
-                chart_title = "Supplier OTIFQ by RM Category"
-                dim_col = "ps.rm_category"
+                chart_title = "Supplier OTIFQ"
+                dim_col = "'All RM'"
 
             query = f"""
                 SELECT {dim_col} as name, AVG(95 - (julianday(s.actual_end_date) - julianday(s.actual_start_date))) as score
-                FROM purchase_sku ps
-                JOIN order_line_items oli ON ps.sku_code = oli.sku_id
-                JOIN movements m ON oli.order_id = m.order_id
-                JOIN shipments s ON m.shipment_id = s.shipment_id
-                WHERE s.from_supplier_id IS NOT NULL AND s.actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL
+                FROM shipments s
+                WHERE s.from_supplier_id IS NOT NULL AND s.actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL {get_time_sql('s.actual_start_date')}
                 GROUP BY name
                 ORDER BY name ASC
                 LIMIT 30
@@ -484,7 +541,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                     SELECT {dim_col} as name, AVG(oli.unit_price) as score
                     FROM order_line_items oli
                     JOIN orders o ON oli.order_id = o.order_id
-                    WHERE {dim_col} IS NOT NULL AND o.order_type = 'Purchase Order'
+                    WHERE {dim_col} IS NOT NULL {get_time_sql('o.order_date')} AND o.order_type LIKE '%Transfer Order%' {get_time_sql('o.order_date')}
                     GROUP BY name
                     ORDER BY name ASC
                     LIMIT 30
@@ -500,7 +557,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                     JOIN order_line_items oli ON ps.sku_code = oli.sku_id
                     JOIN movements m ON oli.order_id = m.order_id
                     JOIN shipments s ON m.shipment_id = s.shipment_id
-                    WHERE {dim_col} IS NOT NULL
+                    WHERE {dim_col} IS NOT NULL {get_time_sql('s.actual_start_date')}
                     GROUP BY name
                     ORDER BY name ASC
                     LIMIT 30
@@ -513,7 +570,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                     FROM purchase_sku ps
                     JOIN order_line_items oli ON ps.sku_code = oli.sku_id
                     JOIN orders o ON oli.order_id = o.order_id
-                    WHERE {dim_col} IS NOT NULL
+                    WHERE {dim_col} IS NOT NULL {get_time_sql('o.order_date')}
                     GROUP BY name
                     ORDER BY name ASC
                     LIMIT 30
@@ -555,7 +612,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                     SELECT {dim_col} as name, AVG((cost_of_shipment + demurrage_cost) / 1000) as score
                     FROM shipments 
                     {item_join}
-                    WHERE {mode_type} AND actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL
+                    WHERE {mode_type} AND actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL {get_time_sql('actual_start_date')}
                     GROUP BY name
                     ORDER BY name ASC
                     LIMIT 30
@@ -564,7 +621,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                 query = f"""
                     SELECT {dim_col} as name, AVG((cost_of_shipment + demurrage_cost) / 1000) as score
                     FROM shipments 
-                    WHERE {mode_type} AND actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL
+                    WHERE {mode_type} AND actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL {get_time_sql('actual_start_date')}
                     GROUP BY name
                     ORDER BY name ASC
                     LIMIT 30
@@ -590,7 +647,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
             query = f"""
                 SELECT {dim_col} as name, AVG(julianday(actual_end_date) - julianday(actual_start_date)) as score
                 FROM shipments 
-                WHERE from_supplier_id IS NOT NULL AND actual_end_date IS NOT NULL AND actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL
+                WHERE from_supplier_id IS NOT NULL AND actual_end_date IS NOT NULL AND actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL {get_time_sql('actual_start_date')}
                 GROUP BY name
                 ORDER BY name ASC
                 LIMIT 30
@@ -615,7 +672,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                     SELECT {dim_col} as name, AVG(scrappage + quality_defects) as errors
                     FROM production_runs pr
                     JOIN sales_sku ss ON pr.sku_id = ss.sku_code
-                    WHERE start_datetime IS NOT NULL AND {dim_col} IS NOT NULL
+                    WHERE start_datetime IS NOT NULL AND {dim_col} IS NOT NULL {get_time_sql('start_datetime')}
                     GROUP BY name
                     ORDER BY name ASC
                     LIMIT 30
@@ -624,7 +681,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                 query = f"""
                     SELECT {dim_col} as name, AVG(scrappage + quality_defects) as errors
                     FROM production_runs 
-                    WHERE start_datetime IS NOT NULL AND {dim_col} IS NOT NULL
+                    WHERE start_datetime IS NOT NULL AND {dim_col} IS NOT NULL {get_time_sql('start_datetime')}
                     GROUP BY name
                     ORDER BY name ASC
                     LIMIT 30
@@ -637,8 +694,9 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
             if dimension == "Time (Monthly)":
                 chart_title = "Inventory Days Trend"
                 query = """
-                SELECT strftime('%Y-%m', date) as name, AVG(quantity) as score
+                SELECT strftime('%Y-%m', as_on_date) as name, AVG(quantity) as score
                 FROM on_hand_inventory
+                WHERE as_on_date IS NOT NULL {get_time_sql('as_on_date')}
                 GROUP BY name
                 ORDER BY name ASC
                 LIMIT 30
@@ -655,6 +713,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                 FROM on_hand_inventory ohi
                 LEFT JOIN purchase_sku ps ON ohi.sku_id = ps.sku_code
                 LEFT JOIN sales_sku ss ON ohi.sku_id = ss.sku_code
+                WHERE 1=1 {get_time_sql('ohi.as_on_date')}
                 GROUP BY name
                 ORDER BY name ASC
                 LIMIT 30
@@ -682,7 +741,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                     JOIN sales_sku ss ON oli.sku_id = ss.sku_code
                     JOIN movements m ON o.order_id = m.order_id
                     JOIN shipments s ON m.shipment_id = s.shipment_id
-                    WHERE s.to_customer_id IS NOT NULL AND s.actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL
+                    WHERE s.to_customer_id IS NOT NULL AND s.actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL {get_time_sql('o.order_date')}
                     GROUP BY name
                     ORDER BY name ASC
                     LIMIT 30
@@ -693,7 +752,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                     FROM orders o
                     JOIN movements m ON o.order_id = m.order_id
                     JOIN shipments s ON m.shipment_id = s.shipment_id
-                    WHERE s.to_customer_id IS NOT NULL AND s.actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL
+                    WHERE s.to_customer_id IS NOT NULL AND s.actual_start_date IS NOT NULL AND {dim_col} IS NOT NULL {get_time_sql('o.order_date')}
                     GROUP BY name
                     ORDER BY name ASC
                     LIMIT 30
@@ -716,7 +775,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                 FROM production_runs pr
                 JOIN production_plan pp ON pr.production_plan_id = pp.production_plan_id
                 JOIN sales_sku ss ON pr.sku_id = ss.sku_code
-                WHERE pr.start_datetime IS NOT NULL AND {dim_col} IS NOT NULL
+                WHERE pr.start_datetime IS NOT NULL AND {dim_col} IS NOT NULL {get_time_sql('pr.start_datetime')}
                 GROUP BY name
                 ORDER BY name ASC
                 LIMIT 30
@@ -735,7 +794,7 @@ def get_dashboard_details(kpi_id: str = None, dimension: str = "Time (Monthly)",
                        SUM(pp.planned_quantity) as planned
                 FROM production_runs pr
                 JOIN production_plan pp ON pr.production_plan_id = pp.production_plan_id
-                WHERE pr.start_datetime IS NOT NULL
+                WHERE pr.start_datetime IS NOT NULL {get_time_sql('pr.start_datetime')}
                 GROUP BY month
                 ORDER BY month ASC
                 LIMIT 12

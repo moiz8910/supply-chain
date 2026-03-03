@@ -59,7 +59,7 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchDetails = async () => {
             try {
-                let url = `/api/dashboard/details?dimension=${encodeURIComponent(graphDimension)}`;
+                let url = `/api/dashboard/details?dimension=${encodeURIComponent(graphDimension)}&timePeriod=${encodeURIComponent(timePeriod)}&customStartDate=${encodeURIComponent(customStartDate)}&customEndDate=${encodeURIComponent(customEndDate)}&region=${encodeURIComponent(region)}&productFamily=${encodeURIComponent(productFamily)}`;
                 if (selectedKpiId) {
                     url += `&kpi_id=${selectedKpiId}`;
                 }
@@ -72,7 +72,7 @@ const Dashboard = () => {
         };
 
         fetchDetails();
-    }, [selectedKpiId, graphDimension]);
+    }, [selectedKpiId, graphDimension, timePeriod, customStartDate, customEndDate, region, productFamily]);
 
     // Update default dimension when picking a new KPI
     useEffect(() => {
@@ -257,6 +257,7 @@ const Dashboard = () => {
                                 <MainChart
                                     data={details?.main_chart}
                                     title={details?.chart_title || `${kpis.find(k => k.id === selectedKpiId)?.title || 'Metric'} Trend`}
+                                    kpiId={selectedKpiId}
                                 />
                             </div>
 
