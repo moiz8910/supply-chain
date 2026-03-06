@@ -476,7 +476,7 @@ async def websocket_exceptions(websocket: WebSocket):
                     })
                     
             await websocket.send_json(exceptions_list)
-            await asyncio.sleep(3)
+            await asyncio.sleep(1)
     except WebSocketDisconnect:
         pass
 

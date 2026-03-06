@@ -7,6 +7,7 @@ import NetworkMapScreen from './components/NetworkMapScreen';
 import TasksScreen from './components/TasksScreen';
 import TaskDetailScreen from './components/TaskDetailScreen';
 import OptimizerScreen from './components/OptimizerScreen';
+import CalendarScreen from './components/CalendarScreen';
 import LoginScreen from './components/LoginScreen';
 
 const ProtectedRoute = ({ children }) => {
@@ -34,6 +35,7 @@ function App() {
           <Route path="tasks" element={<TasksScreen />} />
           <Route path="tasks/:taskId" element={<TaskDetailScreen />} />
           <Route path="optimizer" element={<OptimizerScreen />} />
+          <Route path="calendar" element={<CalendarScreen />} />
         </Route>
       </Routes>
     </BrowserRouter>
