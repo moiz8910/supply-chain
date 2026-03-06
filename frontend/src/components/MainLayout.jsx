@@ -11,7 +11,8 @@ import {
     Settings,
     LogOut,
     AlertOctagon,
-    ChevronLeft
+    ChevronLeft,
+    CalendarDays
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, path, active, isOpen }) => (
@@ -82,6 +83,7 @@ const MainLayout = () => {
         { icon: Map, label: 'Network Map', path: '/map' },
         { icon: CheckSquare, label: 'Pending Tasks', path: '/tasks' },
         { icon: TrendingUp, label: 'Optimizer', path: '/optimizer' },
+        { icon: CalendarDays, label: 'Ops Calendar', path: '/calendar' },
     ];
 
     return (

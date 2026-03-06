@@ -1,0 +1,32 @@
+# AI Dynamic Alternatives for Exceptions
+
+## Goal Description
+The goal is to dynamically generate suggested alternatives/resolutions using an LLM (Bedrock Converse/LangChain setup already available in the backend via [ai_router.py](file:///c:/Github%20Repo/Supply_chain/backend/routers/ai_router.py)) dynamically tailored to the context of a selected Supply Chain Exception. These alternatives will be stored in the database so they are only generated once per exception. A user can select an alternative, click "Use Alternative", and it will generate an actionable "Task" assigned in the database.
+
+## Proposed Changes
+
+### Database Changes
+- Add a new table `exception_alternatives` with fields: `exception_id`, `alt_id`, `title`, `description`, `cost_impact`, `kpi_impact`, `tradeoff`.
+- Add a new table `tasks` with fields: `task_id`, `exception_id`, `title`, `description`, `status`, `created_at`.
+
+### Backend Changes ([anomaly_router.py](file:///c:/Github%20Repo/Supply_chain/backend/routers/anomaly_router.py) / [ai_router.py](file:///c:/Github%20Repo/Supply_chain/backend/routers/ai_router.py))
+- **[MODIFY]** [backend/routers/anomaly_router.py](file:///c:/Github%20Repo/Supply_chain/backend/routers/anomaly_router.py)
+  - Update `GET /api/anomaly/alternatives/{exception_id}` to:
+    1. Query the `exception_alternatives` table for existing alternatives for `exception_id`.
+    2. If found, return them.
+    3. If not found, invoke the LLM via `ChatBedrockConverse` with the exception context to generate 3 options.
+    4. Save the generated options to the `exception_alternatives` table and return them.
+  - Update `POST /api/anomaly/approve` to explicitly create a record in the new `tasks` table and mark the exception as 'Investigating' or 'Mitigating'.
+
+### Frontend Changes ([ExceptionsScreen.jsx](file:///c:/Github%20Repo/Supply_chain/frontend/src/components/ExceptionsScreen.jsx) & [ExceptionDashboard.jsx](file:///c:/Github%20Repo/Supply_chain/frontend/src/components/ExceptionDashboard.jsx))
+- **[MODIFY]** [frontend/src/components/ExceptionsScreen.jsx](file:///c:/Github%20Repo/Supply_chain/frontend/src/components/ExceptionsScreen.jsx)
+  - When an exception is selected, initiate a fetch to `GET /api/anomaly/alternatives/{exception_id}`.
+  - Display a loading state while the LLM generates the initial alternatives.
+  - Render the alternatives block below the exception details.
+  - Add an "Authorize Selected Action" (Use Alternative) button.
+  - Clicking this triggers `POST /api/anomaly/approve/{exception_id}` with the selected alternative ID to create the Task.
+
+## Verification Plan
+1. Send a GET request to `/api/anomaly/alternatives/EX-101` and verify the delay while the LLM generates.
+2. Send the exact same GET request again and verify immediate response (DB cache hit).
+3. Click "Use Alternative" on the UI and check the `tasks` SQLite table to ensure the new task row is inserted correctly.

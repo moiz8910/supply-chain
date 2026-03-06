@@ -1,73 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { AlertCircle, Clock, ChevronRight, MessageSquare, ClipboardList, TrendingDown, Package, User, FileText, X } from 'lucide-react';
+import { AlertCircle, Clock, ChevronRight, MessageSquare, ClipboardList, TrendingDown, Package, User, FileText, X, CheckCircle } from 'lucide-react';
 
-const mockExceptions = [
-    {
-        id: "EX-1042",
-        title: "Critical ISO Tanker Shortage",
-        type: "Logistics Capacity",
-        severity: "High",
-        timeframe: "Today",
-        impacted: "42 Orders | 5 Products",
-        kpi_impact: "OTIF -11.4%",
-        probability: "98%",
-        status: "Investigating",
-        owner: "R. Sharma",
-        due: "2 Hrs"
-    },
-    {
-        id: "EX-1043",
-        title: "Yield Variance at Plant B",
-        type: "Manufacturing",
-        severity: "Medium",
-        timeframe: "This Week",
-        impacted: "3 Batches (Acetic Acid)",
-        kpi_impact: "Cost +4%",
-        probability: "85%",
-        status: "Open",
-        owner: "Unassigned",
-        due: "24 Hrs"
-    },
-    {
-        id: "EX-1044",
-        title: "Raw Material Delay (Methanol)",
-        type: "Procurement",
-        severity: "High",
-        timeframe: "Today",
-        impacted: "Plant C Production Schedule",
-        kpi_impact: "Revenue at Risk: $120k",
-        probability: "90%",
-        status: "Mitigating",
-        owner: "S. Gupta",
-        due: "Overdue"
-    },
-    {
-        id: "EX-1045",
-        title: "Port Congestion - Nhava Sheva",
-        type: "External Logistics",
-        severity: "Medium",
-        timeframe: "This Month",
-        impacted: "14 Export Shipments",
-        kpi_impact: "Lead Time +3 Days",
-        probability: "75%",
-        status: "Open",
-        due: "3 Days"
-    },
-    {
-        id: "EX-1046",
-        title: "Minor Pallet Shortage",
-        type: "Warehousing",
-        severity: "Low",
-        timeframe: "Next Week",
-        impacted: "Warehouse D",
-        kpi_impact: "Cost +1%",
-        probability: "40%",
-        status: "Resolved",
-        owner: "M. Lee",
-        due: "Completed"
-    }
-];
 
 const ExceptionCard = ({ data, onClick, isSelected }) => (
     <div
@@ -78,7 +12,9 @@ const ExceptionCard = ({ data, onClick, isSelected }) => (
             }`}
     >
         <div className="flex justify-between items-start mb-2">
-            <span className={`px-2 py-0.5 rounded text-xs font-bold ${data.severity === 'High' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+            <span className={`px-2 py-0.5 rounded text-xs font-bold ${data.severity === 'High' ? 'bg-red-100 text-red-700' :
+                data.severity === 'Medium' ? 'bg-orange-100 text-orange-700' :
+                    'bg-green-100 text-green-700'
                 }`}>{data.severity}</span>
             <span className="text-xs text-gray-500 font-medium">{data.timeframe}</span>
         </div>
@@ -99,11 +35,11 @@ const ExceptionCard = ({ data, onClick, isSelected }) => (
                     <User size={12} /> {data.owner}
                 </div>
                 <span className={`px-2 py-0.5 rounded-full ${data.status === 'Open' ? 'bg-gray-100 text-gray-600' :
-                        data.status === 'Investigating' ? 'bg-blue-100 text-blue-700' :
-                            data.status === 'Mitigating' ? 'bg-purple-100 text-purple-700' :
-                                data.status === 'Monitoring' ? 'bg-teal-100 text-teal-700' :
-                                    data.status === 'Resolved' ? 'bg-green-100 text-green-700' :
-                                        'bg-gray-100 text-gray-600'
+                    data.status === 'Investigating' ? 'bg-blue-100 text-blue-700' :
+                        data.status === 'Mitigating' ? 'bg-purple-100 text-purple-700' :
+                            data.status === 'Monitoring' ? 'bg-teal-100 text-teal-700' :
+                                data.status === 'Resolved' ? 'bg-green-100 text-green-700' :
+                                    'bg-gray-100 text-gray-600'
                     }`}>{data.status}</span>
             </div>
         </div>
@@ -118,7 +54,15 @@ const ExceptionsScreen = () => {
     const [severityFilter, setSeverityFilter] = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
     const [showArchived, setShowArchived] = useState(false);
-    const [exceptions, setExceptions] = useState(mockExceptions); // Initialize with mock, overridden by live data
+    const [exceptions, setExceptions] = useState([]);
+    const [wsConnected, setWsConnected] = useState(false);
+    const [alternatives, setAlternatives] = useState([]);
+    const [loadingAlts, setLoadingAlts] = useState(false);
+    const [approvingId, setApprovingId] = useState(null);
+    const [approvedTaskId, setApprovedTaskId] = useState(null);
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+
+    const STATUS_OPTIONS = ['Open', 'Investigating', 'Mitigating', 'Monitoring', 'Resolved'];
 
     useEffect(() => {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -128,7 +72,10 @@ const ExceptionsScreen = () => {
 
         const connect = () => {
             ws = new WebSocket(wsUrl);
-            ws.onopen = () => console.log('Connected to live exceptions stream');
+            ws.onopen = () => {
+                console.log('Connected to live exceptions stream');
+                setWsConnected(true);
+            };
             ws.onmessage = (event) => setExceptions(JSON.parse(event.data));
             ws.onclose = () => {
                 console.log('Exceptions socket closed. Reconnecting...');
@@ -151,19 +98,73 @@ const ExceptionsScreen = () => {
         }
     }, [exceptionId]);
 
+    useEffect(() => {
+        if (selectedId) {
+            setLoadingAlts(true);
+            setApprovedTaskId(null);
+            fetch(`/api/anomaly/alternatives/${selectedId}`)
+                .then(res => res.json())
+                .then(data => {
+                    setAlternatives(data || []);
+                    setLoadingAlts(false);
+                })
+                .catch(err => {
+                    console.error("Failed to load alternatives", err);
+                    setLoadingAlts(false);
+                });
+        }
+    }, [selectedId]);
+
+    const handleApprove = async (altId) => {
+        setApprovingId(altId);
+        try {
+            const res = await fetch('/api/anomaly/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ exception_id: selectedId, alternative_id: altId })
+            });
+            if (res.ok) {
+                setApprovedTaskId(altId);
+            }
+        } catch (error) {
+            console.error("Approval failed", error);
+        } finally {
+            setApprovingId(null);
+        }
+    };
+
     const handleSelect = (id) => {
         setSelectedId(id);
         setShowEvidence(false);
         navigate(`/exceptions/${id}`, { replace: true });
     };
 
+    const handleUpdateStatus = async (newStatus) => {
+        if (!selectedException) return;
+        setShowStatusDropdown(false);
+
+        // Optimistic UI update
+        const updatedExceptions = exceptions.map(exc =>
+            exc.id === selectedId ? { ...exc, status: newStatus } : exc
+        );
+        setExceptions(updatedExceptions);
+
+        // Persist to DB
+        try {
+            await fetch(`/api/anomaly/${selectedId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+        } catch (err) {
+            console.error("Failed to update status on backend:", err);
+        }
+    };
+
     const filteredExceptions = exceptions.filter(exc => {
         if (showArchived) {
             if (exc.status !== 'Resolved') return false;
-        } else {
-            if (exc.status === 'Resolved') return false;
         }
-
         if (severityFilter !== 'All' && exc.severity !== severityFilter) return false;
         if (statusFilter !== 'All' && exc.status !== statusFilter) return false;
         return true;
@@ -222,14 +223,29 @@ const ExceptionsScreen = () => {
                         </div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                        {filteredExceptions.map(exc => (
-                            <ExceptionCard
-                                key={exc.id}
-                                data={exc}
-                                isSelected={selectedId === exc.id}
-                                onClick={() => handleSelect(exc.id)}
-                            />
-                        ))}
+                        {!wsConnected ? (
+                            Array.from({ length: 4 }).map((_, i) => (
+                                <div key={i} className="p-4 border border-gray-200 rounded-xl bg-white animate-pulse">
+                                    <div className="h-3 bg-gray-200 rounded w-1/3 mb-2" />
+                                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-1" />
+                                    <div className="h-3 bg-gray-200 rounded w-1/2 mt-3" />
+                                </div>
+                            ))
+                        ) : filteredExceptions.length === 0 ? (
+                            <div className="text-center text-gray-400 py-10">
+                                <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                                <p className="text-sm">No exceptions found</p>
+                            </div>
+                        ) : (
+                            filteredExceptions.map(exc => (
+                                <ExceptionCard
+                                    key={exc.id}
+                                    data={exc}
+                                    isSelected={selectedId === exc.id}
+                                    onClick={() => handleSelect(exc.id)}
+                                />
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -242,7 +258,10 @@ const ExceptionsScreen = () => {
                             <div className="flex justify-between items-start">
                                 <div>
                                     <div className="flex items-center gap-3 mb-2">
-                                        <span className={`px-2.5 py-1 rounded text-xs font-bold ${selectedException.severity === 'High' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}`}>
+                                        <span className={`px-2.5 py-1 rounded text-xs font-bold ${selectedException.severity === 'High' ? 'bg-red-100 text-red-700' :
+                                            selectedException.severity === 'Medium' ? 'bg-orange-100 text-orange-700' :
+                                                'bg-green-100 text-green-700'
+                                            }`}>
                                             Severity: {selectedException.severity}
                                         </span>
                                         <span className="text-sm text-gray-500 font-medium">{selectedException.id}</span>
@@ -252,7 +271,29 @@ const ExceptionsScreen = () => {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">Assign Owner</button>
-                                    <button className="px-4 py-2 bg-indigo-600 rounded-lg text-sm font-bold text-white hover:bg-indigo-700 transition-colors">Update Status</button>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowStatusDropdown(prev => !prev)}
+                                            className="px-4 py-2 bg-indigo-600 rounded-lg text-sm font-bold text-white hover:bg-indigo-700 transition-colors flex items-center gap-2"
+                                        >
+                                            Update Status
+                                            <span className="text-xs opacity-75">▼</span>
+                                        </button>
+                                        {showStatusDropdown && (
+                                            <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                                                {STATUS_OPTIONS.map(s => (
+                                                    <button
+                                                        key={s}
+                                                        onClick={() => handleUpdateStatus(s)}
+                                                        className={`w-full px-4 py-2.5 text-left text-sm font-medium hover:bg-indigo-50 hover:text-indigo-700 transition-colors ${selectedException?.status === s ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-gray-700'
+                                                            }`}
+                                                    >
+                                                        {s}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -299,21 +340,50 @@ const ExceptionsScreen = () => {
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-4 px-1 border-b border-gray-200 pb-2">Recommended Mitigations</h3>
                                 <div className="space-y-4">
-                                    {[1, 2].map(i => (
-                                        <div key={i} className="p-5 border border-gray-200 rounded-xl hover:border-indigo-300 transition-colors flex justify-between items-center group">
-                                            <div>
-                                                <h4 className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                                                    {i === 1 ? 'Pre-book Guaranteed Capacity (Premium)' : 'Prioritize Tier 1 Customers & Delay Remainder'}
-                                                </h4>
-                                                <p className="text-sm text-gray-500 mt-1">
-                                                    {i === 1 ? 'Cost Impact: +$120K. Maintains OTIF >90%.' : 'Minimizes upfront cost. Long-term SLA risk.'}
-                                                </p>
-                                            </div>
-                                            <button className="text-indigo-600 font-bold text-sm bg-indigo-50 px-4 py-2 rounded-lg hover:bg-indigo-100 mix-blend-multiply flex items-center gap-2">
-                                                Simulate <ChevronRight size={16} />
-                                            </button>
+                                    {loadingAlts ? (
+                                        <div className="p-5 border border-indigo-100 rounded-xl flex items-center justify-center space-x-3 text-indigo-600 bg-indigo-50 shadow-sm mt-4 mb-4">
+                                            <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                                            <span className="font-bold text-sm tracking-wide">AI Agent generating strategic alternatives...</span>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        alternatives.map((alt) => (
+                                            <div key={alt.id} className={`p-5 border-2 rounded-xl transition-all relative flex flex-col gap-4 ${approvedTaskId === alt.id ? 'border-green-500 bg-green-50/20' : 'border-gray-100 hover:border-indigo-200 hover:bg-gray-50'}`}>
+                                                <div className="flex-1">
+                                                    <h4 className="font-bold text-gray-900 text-base leading-tight mb-2 flex items-center justify-between">
+                                                        <span>{alt.title}</span>
+                                                        {approvedTaskId === alt.id && <span className="flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-100 px-2.5 py-1 rounded-full"><CheckCircle className="w-3.5 h-3.5" /> Authorized</span>}
+                                                    </h4>
+                                                    <p className="text-sm text-gray-600 leading-relaxed mb-4">{alt.description}</p>
+
+                                                    <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                                                        <div>
+                                                            <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Cost Impact</span>
+                                                            <span className="inline-block text-sm font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded flex items-center h-6">{alt.cost_impact}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1">KPI Impact</span>
+                                                            <span className="text-xs text-gray-700 font-medium block">{alt.kpi_impact}</span>
+                                                        </div>
+                                                        <div className="flex flex-col justify-end items-end h-full w-full">
+                                                            <button
+                                                                onClick={() => handleApprove(alt.id)}
+                                                                disabled={approvingId === alt.id || approvedTaskId === alt.id}
+                                                                className={`w-full font-bold text-sm px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors ${approvedTaskId === alt.id ? 'bg-green-100 text-green-700 opacity-50 cursor-not-allowed hidden' : approvingId === alt.id ? 'bg-indigo-400 text-white cursor-wait' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'}`}
+                                                            >
+                                                                {approvingId === alt.id ? (
+                                                                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Authorizing...</>
+                                                                ) : approvedTaskId === alt.id ? (
+                                                                    <><CheckCircle size={16} /> Created</>
+                                                                ) : (
+                                                                    <>Use Alternative <ChevronRight size={16} /></>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
 
