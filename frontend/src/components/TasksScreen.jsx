@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Filter, Search, UserPlus } from 'lucide-react';
 
@@ -48,8 +48,56 @@ const mockTasks = [
 const TasksScreen = () => {
     const [filter, setFilter] = useState('All Tasks');
     const navigate = useNavigate();
+    const [tasks, setTasks] = useState(mockTasks);
+    const [totalTasks, setTotalTasks] = useState(24);
 
-    const filteredTasks = mockTasks.filter(task => {
+    useEffect(() => {
+        fetch('/api/tasks')
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    const dynamicTasks = data.map(task => ({
+                        id: task.id,
+                        title: task.title,
+                        type: task.type,
+                        priority: task.priority,
+                        owner: task.owner,
+                        due: task.due,
+                        status: task.status,
+                        details: task.description
+                    }));
+                    setTasks([...dynamicTasks, ...mockTasks]);
+                    setTotalTasks(24 + dynamicTasks.length);
+                }
+            })
+            .catch(err => console.error("Error fetching tasks:", err));
+    }, []);
+
+    const handleTaskAction = async (taskId, action) => {
+        // Optimistically update UI
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        setTotalTasks(prev => prev - 1);
+
+        if (taskId.startsWith('TSKAI-')) {
+            const dbId = taskId.replace('TSKAI-', '');
+            let newStatus = 'Closed';
+            if (action === 'approve') newStatus = 'Approved';
+            if (action === 'reject') newStatus = 'Rejected';
+            if (action === 'reassign') newStatus = 'Re-assigned';
+
+            try {
+                await fetch(`/api/tasks/${dbId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+            } catch (err) {
+                console.error("Failed to update task", err);
+            }
+        }
+    };
+
+    const filteredTasks = tasks.filter(task => {
         if (filter === 'All Tasks') return true;
         if (filter === 'My Tasks') return task.owner === 'Me';
         if (filter === 'Team Tasks') return task.owner !== 'Me';
@@ -82,11 +130,11 @@ const TasksScreen = () => {
             <div className="flex-1 overflow-auto p-8">
 
                 {/* Metric Summary */}
-                <div className="grid grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-3 gap-4 mb-8">
                     <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
                         <div>
                             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Pending</p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">24</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">{totalTasks}</p>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><Clock size={20} /></div>
                     </div>
@@ -99,17 +147,10 @@ const TasksScreen = () => {
                     </div>
                     <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
                         <div>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">SLA Risk</p>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Overdue Risk</p>
                             <p className="text-2xl font-bold text-orange-500 mt-1">3</p>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center"><Clock size={20} /></div>
-                    </div>
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Avg Lead Time</p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">14 Hrs</p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center"><CheckCircle size={20} /></div>
                     </div>
                 </div>
 
@@ -130,7 +171,7 @@ const TasksScreen = () => {
                             <tr>
                                 <th className="px-6 py-4">Task Details</th>
                                 <th className="px-6 py-4">Type</th>
-                                <th className="px-6 py-4">SLA Countdown</th>
+                                <th className="px-6 py-4">Action due by</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -184,9 +225,9 @@ const TasksScreen = () => {
                                             className="flex items-center justify-end gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <button title="Accept / Approve" className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"><CheckCircle size={18} /></button>
-                                            <button title="Reject" className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"><XCircle size={18} /></button>
-                                            <button title="Re-assign" className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"><UserPlus size={18} /></button>
+                                            <button onClick={() => handleTaskAction(task.id, 'approve')} title="Accept / Approve" className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"><CheckCircle size={18} /></button>
+                                            <button onClick={() => handleTaskAction(task.id, 'reject')} title="Reject" className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"><XCircle size={18} /></button>
+                                            <button onClick={() => handleTaskAction(task.id, 'reassign')} title="Re-assign" className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"><UserPlus size={18} /></button>
                                         </div>
                                     </td>
                                 </tr>

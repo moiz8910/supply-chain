@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import ExceptionDashboard from './ExceptionDashboard';
 import {
     LayoutDashboard,
@@ -11,7 +11,8 @@ import {
     Settings,
     LogOut,
     AlertOctagon,
-    ChevronLeft
+    ChevronLeft,
+    CalendarDays
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, path, active, isOpen }) => (
@@ -30,8 +31,13 @@ const SidebarItem = ({ icon: Icon, label, path, active, isOpen }) => (
 
 const MainLayout = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const [showException, setShowException] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Mock User Data
+    const username = "Alex";
+    const role = "Supply chain Regional manager";
 
     // AI Chat State
     const [chatInput, setChatInput] = useState('');
@@ -77,6 +83,7 @@ const MainLayout = () => {
         { icon: Map, label: 'Network Map', path: '/map' },
         { icon: CheckSquare, label: 'Pending Tasks', path: '/tasks' },
         { icon: TrendingUp, label: 'Optimizer', path: '/optimizer' },
+        { icon: CalendarDays, label: 'Ops Calendar', path: '/calendar' },
     ];
 
     return (
@@ -108,6 +115,19 @@ const MainLayout = () => {
                     )}
                 </div>
 
+                {/* User Welcome */}
+                <div className={`p-4 border-b border-gray-100 flex items-center gap-3 transition-all ${!isSidebarOpen && 'justify-center px-2'}`}>
+                    <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0">
+                        {username.charAt(0)}
+                    </div>
+                    {isSidebarOpen && (
+                        <div className="overflow-hidden whitespace-nowrap animate-in fade-in duration-300">
+                            <p className="text-sm font-bold text-gray-900 leading-tight truncate">Welcome, {username}</p>
+                            <p className="text-xs font-medium text-gray-500 truncate">{role}</p>
+                        </div>
+                    )}
+                </div>
+
                 <div className={`flex-1 overflow-y-auto p-4 space-y-2 ${!isSidebarOpen && 'px-3'}`}>
                     {isSidebarOpen && <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-2">Modules</div>}
                     {navItems.map(item => (
@@ -124,7 +144,17 @@ const MainLayout = () => {
 
                 <div className={`p-4 border-t border-gray-100 space-y-2 ${!isSidebarOpen && 'px-3'}`}>
                     <SidebarItem icon={Settings} label="Settings" path="/settings" isOpen={isSidebarOpen} />
-                    <SidebarItem icon={LogOut} label="Sign Out" path="/logout" isOpen={isSidebarOpen} />
+                    <button
+                        onClick={() => {
+                            localStorage.removeItem('isAuthenticated');
+                            navigate('/login');
+                        }}
+                        title={!isSidebarOpen ? "Sign Out" : ""}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-gray-500 hover:bg-red-50 hover:text-red-700 ${!isSidebarOpen && 'justify-center px-0'}`}
+                    >
+                        <LogOut className="w-5 h-5 shrink-0" />
+                        {isSidebarOpen && <span className="font-medium text-sm whitespace-nowrap">Sign Out</span>}
+                    </button>
                 </div>
             </div>
 

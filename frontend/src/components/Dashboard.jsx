@@ -15,6 +15,7 @@ const Dashboard = () => {
     const [region, setRegion] = useState('Global');
     const [productFamily, setProductFamily] = useState('All Families');
     const [filterOptions, setFilterOptions] = useState({ regions: ['Global'], product_families: ['All Families'] });
+    const [graphDimension, setGraphDimension] = useState('');
 
     const [selectedKpiKeys, setSelectedKpiKeys] = useState(() => {
         const saved = localStorage.getItem('selectedKpis');
@@ -48,20 +49,64 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
-        // Fetch initial static details (like chart/table mocks)
-        fetch('/api/dashboard/details')
-            .then(res => res.json())
-            .then(detailData => {
-                setDetails(detailData);
-            })
-            .catch(err => console.error('Error fetching details:', err));
-
-        // Fetch dynamic filter options from DB
+        // Fetch dynamic filter options from DB (only once)
         fetch('/api/dashboard/filters')
             .then(res => res.json())
             .then(data => setFilterOptions(data))
             .catch(err => console.error('Error fetching filters:', err));
     }, []);
+
+    useEffect(() => {
+        const fetchDetails = async () => {
+            try {
+                let url = `/api/dashboard/details?dimension=${encodeURIComponent(graphDimension)}&timePeriod=${encodeURIComponent(timePeriod)}&customStartDate=${encodeURIComponent(customStartDate)}&customEndDate=${encodeURIComponent(customEndDate)}&region=${encodeURIComponent(region)}&productFamily=${encodeURIComponent(productFamily)}`;
+                if (selectedKpiId) {
+                    url += `&kpi_id=${selectedKpiId}`;
+                }
+                const res = await fetch(url);
+                const data = await res.json();
+                setDetails(data);
+            } catch (err) {
+                console.error('Error fetching details:', err);
+            }
+        };
+
+        fetchDetails();
+    }, [selectedKpiId, graphDimension, timePeriod, customStartDate, customEndDate, region, productFamily]);
+
+    // Update default dimension when picking a new KPI
+    useEffect(() => {
+        if (!selectedKpiId) return;
+        const dims = getDimensionsForKpi(selectedKpiId);
+        setGraphDimension(dims[0]);
+    }, [selectedKpiId]);
+
+    const getDimensionsForKpi = (id) => {
+        switch (id) {
+            case 'supplier_otifq':
+                return ['RM category', 'Supplier', 'Time (Monthly)'];
+            case 'rm_cost_per_unit':
+                return ['RM category', 'Supplier', 'Time (Monthly)'];
+            case 'inbound_transport_cost':
+                return ['RM category', 'Mode', 'Lane', 'LSP', 'Time (Monthly)'];
+            case 'avg_transit_time_rm':
+                return ['Mode', 'Lane', 'LSP', 'Time (Monthly)'];
+            case 'inventory_days_cover':
+                return ['RM & FG type', 'Time (Monthly)'];
+            case 'production_cost':
+                return ['FG type', 'Line', 'Time (Monthly)'];
+            case 'production_plan_compliance':
+                return ['FG type', 'Time (Monthly)'];
+            case 'quality_rate':
+                return ['FG type', 'Line', 'Time (Monthly)'];
+            case 'outbound_transport_cost':
+                return ['FG type', 'Mode', 'Time (Monthly)'];
+            case 'otif_score':
+                return ['FG type', 'Region', 'Time (Monthly)'];
+            default:
+                return ['Time (Monthly)'];
+        }
+    };
 
     useEffect(() => {
         // Connect to Real-time WebSocket Data Stream for KPIs
@@ -192,16 +237,16 @@ const Dashboard = () => {
                                     {kpis.find(k => k.id === selectedKpiId)?.title || 'KPI'}
                                 </span>
                             </div>
-                            <div className="flex gap-3">
-                                <select className="bg-gray-50 border border-gray-200 outline-none px-3 py-1.5 rounded-md text-gray-600 font-medium text-xs focus:ring-2 focus:ring-indigo-500">
-                                    <option>Daily</option>
-                                    <option>Weekly</option>
-                                    <option>Monthly</option>
-                                </select>
-                                <select className="bg-gray-50 border border-gray-200 outline-none px-3 py-1.5 rounded-md text-gray-600 font-medium text-xs focus:ring-2 focus:ring-indigo-500">
-                                    <option>All Divisions</option>
-                                    <option>Chemicals</option>
-                                    <option>Specialty</option>
+                            <div className="flex gap-3 items-center">
+                                <span className="font-semibold text-xs text-gray-500">View By:</span>
+                                <select
+                                    value={graphDimension}
+                                    onChange={(e) => setGraphDimension(e.target.value)}
+                                    className="bg-gray-50 border border-gray-200 outline-none px-3 py-1.5 rounded-md text-gray-700 font-bold text-xs focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm"
+                                >
+                                    {getDimensionsForKpi(selectedKpiId).map(dim => (
+                                        <option key={dim} value={dim}>{dim}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
@@ -211,7 +256,8 @@ const Dashboard = () => {
                             <div className="lg:col-span-2 h-full">
                                 <MainChart
                                     data={details?.main_chart}
-                                    title={`${kpis.find(k => k.id === selectedKpiId)?.title || 'Metric'} Trend`}
+                                    title={details?.chart_title || `${kpis.find(k => k.id === selectedKpiId)?.title || 'Metric'} Trend`}
+                                    kpiId={selectedKpiId}
                                 />
                             </div>
 
