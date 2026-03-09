@@ -191,7 +191,7 @@ const AddEventModal = ({ onClose, onSaved, defaultDate }) => {
     );
 };
 
-const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 6); // 6 AM to 8 PM
 
 function getWeekDates(refDate) {
@@ -199,7 +199,7 @@ function getWeekDates(refDate) {
     const day = d.getDay();
     const sunday = new Date(d);
     sunday.setDate(d.getDate() - day);
-    return Array.from({ length: 6 }, (_, i) => {
+    return Array.from({ length: 7 }, (_, i) => {
         const dd = new Date(sunday);
         dd.setDate(sunday.getDate() + i);
         return dd;
@@ -340,7 +340,7 @@ const MonthView = ({ refDate, activeCategories, onSelectEvent, events }) => {
 
     return (
         <div className="flex-1 p-4 overflow-auto">
-            <div className="grid grid-cols-6 gap-px bg-gray-200 rounded-xl overflow-hidden border border-gray-200">
+            <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-xl overflow-hidden border border-gray-200">
                 {WEEK_DAYS.map(d => (
                     <div key={d} className="bg-gray-50 text-xs font-bold text-gray-500 text-center py-2 uppercase">{d}</div>
                 ))}
@@ -379,7 +379,7 @@ const WeekView = ({ weekDates, activeCategories, onSelectEvent, selectedEvent, e
     return (
         <div className="flex-1 overflow-auto">
             {/* Day headers */}
-            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 grid grid-cols-[72px_repeat(6,1fr)]">
+            <div className="sticky top-0 z-10 bg-white border-b border-gray-200 grid grid-cols-[72px_repeat(7,1fr)]">
                 <div className="border-r border-gray-100" />
                 {weekDates.map((d, i) => {
                     const ds = toDateStr(d);
@@ -394,7 +394,7 @@ const WeekView = ({ weekDates, activeCategories, onSelectEvent, selectedEvent, e
             </div>
 
             {/* Time grid */}
-            <div className="relative grid grid-cols-[72px_repeat(6,1fr)]">
+            <div className="relative grid grid-cols-[72px_repeat(7,1fr)]">
                 {/* Hour labels */}
                 <div>
                     {HOURS.map(h => (
@@ -527,7 +527,7 @@ const CalendarScreen = () => {
     const headerTitle = view === 'month'
         ? formatMonthYear(refDate)
         : view === 'week'
-            ? `${weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${weekDates[5].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+            ? `${weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
             : refDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
     const openExceptions = events.filter(e => e.category === 'governance' && activeCategories.includes('governance')).length;
@@ -563,24 +563,6 @@ const CalendarScreen = () => {
                             <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"><ChevronRight size={16} /></button>
                             <button onClick={() => setRefDate(new Date())} className="px-2.5 py-1 text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors">Today</button>
                         </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        {/* Scope */}
-                        <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors">
-                            <Settings2 size={12} />
-                            Scope: {scope}
-                        </div>
-                        {/* Alerts badge */}
-                        <button onClick={() => setShowAlerts(!showAlerts)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${showAlerts ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-gray-100 text-gray-600'}`}>
-                            <Bell size={13} />
-                            {openExceptions} Open Exceptions
-                        </button>
-                        <button onClick={() => setShowAddModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm shadow-indigo-200">
-                            <Plus size={13} /> Add Event
-                        </button>
                     </div>
                 </div>
 
