@@ -1,11 +1,11 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
-# DB is one level up from backend folder
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "supply_chain.db")
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
+# Use a relative path so it works both locally and on Render.
+# On Render, the working directory is the backend folder.
+SQLALCHEMY_DATABASE_URL = "sqlite:///./supply_chain.db"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
@@ -20,3 +20,13 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def test_db_connection():
+    """Returns True if DB connection is healthy."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception as e:
+        print(f"DB connection test failed: {e}")
+        return False

@@ -480,10 +480,16 @@ async def websocket_exceptions(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
-# Establish dynamic 'now' based on mock DB on module load
-global_max_date = pd.read_sql("SELECT MAX(actual_start_date) FROM shipments", engine).iloc[0,0]
-if not global_max_date: global_max_date = pd.Timestamp.now().strftime('%Y-%m-%d')
-global_max_date = str(global_max_date)[:10]
+# Lazily compute the DB max date — never run at import time.
+def _get_max_date() -> str:
+    """Return the latest actual_start_date in shipments, or today as fallback."""
+    try:
+        result = pd.read_sql("SELECT MAX(actual_start_date) FROM shipments", engine).iloc[0, 0]
+        if result:
+            return str(result)[:10]
+    except Exception as e:
+        print(f"Warning: could not read max date from shipments: {e}")
+    return pd.Timestamp.now().strftime('%Y-%m-%d')
 
 @router.get("/dashboard/details")
 def get_dashboard_details(
@@ -500,11 +506,14 @@ def get_dashboard_details(
     contributors = []
     chart_title = "Trend Analysis"
 
+    # Compute lazily at request-time (safe on Render - no import-time DB access)
+    max_date = _get_max_date()
+
     def get_time_sql(date_col):
-        if timePeriod == "Last 30 Days": return f" AND {date_col} >= date('{global_max_date}', '-30 days')"
-        if timePeriod == "Last Quarter": return f" AND {date_col} >= date('{global_max_date}', '-90 days')"
-        if timePeriod == "Year to Date": return f" AND strftime('%Y', {date_col}) = strftime('%Y', '{global_max_date}')"
-        if timePeriod == "Last 12 Months": return f" AND {date_col} >= date('{global_max_date}', '-365 days')"
+        if timePeriod == "Last 30 Days": return f" AND {date_col} >= date('{max_date}', '-30 days')"
+        if timePeriod == "Last Quarter": return f" AND {date_col} >= date('{max_date}', '-90 days')"
+        if timePeriod == "Year to Date": return f" AND strftime('%Y', {date_col}) = strftime('%Y', '{max_date}')"
+        if timePeriod == "Last 12 Months": return f" AND {date_col} >= date('{max_date}', '-365 days')"
         if timePeriod == "Custom Range" and customStartDate and customEndDate: return f" AND {date_col} >= '{customStartDate}' AND {date_col} <= '{customEndDate}'"
         return ""
 

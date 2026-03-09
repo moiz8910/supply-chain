@@ -1,6 +1,7 @@
 fastapi
-uvicorn
+uvicorn[standard]
 sqlalchemy
 pandas
+numpy
 sqlite-utils
 python-multipart
