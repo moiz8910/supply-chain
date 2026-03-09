@@ -5,3 +5,4 @@ pandas
 numpy
 sqlite-utils
 python-multipart
+langchain_aws
