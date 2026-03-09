@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, X, ArrowRight, CheckCircle, Clock, Settings2 } from 'lucide-react';
+import { getFullUrl } from '../lib/api';
 
 const ExceptionDashboard = ({ onClose }) => {
     const navigate = useNavigate();
@@ -35,7 +36,7 @@ const ExceptionDashboard = ({ onClose }) => {
         setAnomaly(mockAnomalyData);
         setImpact(mockImpactData);
 
-        fetch(`/api/anomaly/alternatives/${EXCEPTION_ID}`)
+        fetch(getFullUrl(`/api/anomaly/alternatives/${EXCEPTION_ID}`))
             .then(res => res.json())
             .then(data => setAlternatives(data))
             .catch(err => console.error("Failed to load anomaly alternatives", err));
@@ -46,7 +47,7 @@ const ExceptionDashboard = ({ onClose }) => {
         setStatus('approving');
         try {
             const EXCEPTION_ID = "EX-1042";
-            const res = await fetch('/api/anomaly/approve', {
+            const res = await fetch(getFullUrl('/api/anomaly/approve'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ exception_id: EXCEPTION_ID, alternative_id: selectedAlt })

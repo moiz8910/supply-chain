@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { AlertCircle, Clock, ChevronRight, MessageSquare, ClipboardList, TrendingDown, Package, User, FileText, X, CheckCircle } from 'lucide-react';
+import { AlertTriangle, TrendingUp, TrendingDown, Clock, CheckCircle, Package, Truck, Search, Filter, MoreVertical, X, ExternalLink, ShieldAlert, Sparkles, MapPin, User, ChevronRight, Eye } from 'lucide-react';
+import { getFullUrl, getWsUrl } from '../lib/api';
 
 
 const ExceptionCard = ({ data, onClick, isSelected }) => (
@@ -65,13 +66,11 @@ const ExceptionsScreen = () => {
     const STATUS_OPTIONS = ['Open', 'Investigating', 'Mitigating', 'Monitoring', 'Resolved'];
 
     useEffect(() => {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/api/ws/exceptions`;
         let ws;
         let retryTimer;
 
         const connect = () => {
-            ws = new WebSocket(wsUrl);
+            ws = new WebSocket(getWsUrl('/api/ws/exceptions'));
             ws.onopen = () => {
                 console.log('Connected to live exceptions stream');
                 setWsConnected(true);
@@ -102,7 +101,7 @@ const ExceptionsScreen = () => {
         if (selectedId) {
             setLoadingAlts(true);
             setApprovedTaskId(null);
-            fetch(`/api/anomaly/alternatives/${selectedId}`)
+            fetch(getFullUrl(`/api/anomaly/alternatives/${selectedId}`))
                 .then(res => res.json())
                 .then(data => {
                     setAlternatives(data || []);
@@ -118,7 +117,7 @@ const ExceptionsScreen = () => {
     const handleApprove = async (altId) => {
         setApprovingId(altId);
         try {
-            const res = await fetch('/api/anomaly/approve', {
+            const res = await fetch(getFullUrl('/api/anomaly/approve'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ exception_id: selectedId, alternative_id: altId })
@@ -151,7 +150,7 @@ const ExceptionsScreen = () => {
 
         // Persist to DB
         try {
-            await fetch(`/api/anomaly/${selectedId}/status`, {
+            await fetch(getFullUrl(`/api/anomaly/${selectedId}/status`), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: newStatus })

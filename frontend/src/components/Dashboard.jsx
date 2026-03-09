@@ -3,6 +3,7 @@ import KPITile from './KPITile';
 import MainChart from './MainChart';
 import Contributors from './Contributors';
 import { Bell, User, Sparkles, Settings2, X, Check } from 'lucide-react';
+import { getFullUrl, getWsUrl } from '../lib/api';
 
 const Dashboard = () => {
     const [kpis, setKpis] = useState([]);
@@ -50,7 +51,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         // Fetch dynamic filter options from DB (only once)
-        fetch('/api/dashboard/filters')
+        fetch(getFullUrl('/api/dashboard/filters'))
             .then(res => res.json())
             .then(data => setFilterOptions(data))
             .catch(err => console.error('Error fetching filters:', err));
@@ -63,7 +64,7 @@ const Dashboard = () => {
                 if (selectedKpiId) {
                     url += `&kpi_id=${selectedKpiId}`;
                 }
-                const res = await fetch(url);
+                const res = await fetch(getFullUrl(url));
                 const data = await res.json();
                 setDetails(data);
             } catch (err) {
@@ -110,8 +111,7 @@ const Dashboard = () => {
 
     useEffect(() => {
         // Connect to Real-time WebSocket Data Stream for KPIs
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/api/ws/kpis`;
+        const wsUrl = getWsUrl('/api/ws/kpis');
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
@@ -128,7 +128,7 @@ const Dashboard = () => {
         ws.onerror = (err) => {
             console.error('WebSocket Error:', err);
             // Fallback to REST API if WebSocket fails
-            fetch('/api/kpis').then(res => res.json()).then(data => {
+            fetch(getFullUrl('/api/kpis')).then(res => res.json()).then(data => {
                 setKpis(data);
                 setLoading(false);
             });

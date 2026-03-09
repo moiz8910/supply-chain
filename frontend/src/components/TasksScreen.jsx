@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Filter, Search, UserPlus } from 'lucide-react';
+import { getFullUrl } from '../lib/api';
 
 const mockTasks = [
     {
@@ -52,7 +53,7 @@ const TasksScreen = () => {
     const [totalTasks, setTotalTasks] = useState(24);
 
     useEffect(() => {
-        fetch('/api/tasks')
+        fetch(getFullUrl('/api/tasks'))
             .then(res => res.json())
             .then(data => {
                 if (data && data.length > 0) {
@@ -86,7 +87,7 @@ const TasksScreen = () => {
             if (action === 'reassign') newStatus = 'Re-assigned';
 
             try {
-                await fetch(`/api/tasks/${dbId}`, {
+                await fetch(getFullUrl(`/api/tasks/${dbId}`), {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: newStatus })

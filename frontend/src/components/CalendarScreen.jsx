@@ -5,6 +5,7 @@ import {
     Calendar, Clock, Tag, X, ExternalLink,
     RefreshCw, Package, Truck, BarChart2, Settings2, Loader2, Sparkles
 } from 'lucide-react';
+import { getFullUrl } from '../lib/api';
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -44,7 +45,7 @@ const AddEventModal = ({ onClose, onSaved, defaultDate }) => {
         setSaving(true);
         setError(null);
         try {
-            const res = await fetch('/api/calendar/events', {
+            const res = await fetch(getFullUrl('/api/calendar/events'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -500,7 +501,7 @@ const CalendarScreen = () => {
 
     const fetchEvents = useCallback(() => {
         setLoading(true);
-        fetch('/api/calendar/events')
+        fetch(getFullUrl('/api/calendar/events'))
             .then(r => r.json())
             .then(data => { setEvents(data); setLoading(false); })
             .catch(e => { setError(e.message); setLoading(false); });

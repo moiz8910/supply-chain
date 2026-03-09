@@ -14,14 +14,15 @@ import {
     ChevronLeft,
     CalendarDays
 } from 'lucide-react';
+import { getFullUrl } from '../lib/api';
 
 const SidebarItem = ({ icon: Icon, label, path, active, isOpen }) => (
     <Link
         to={path}
         title={!isOpen ? label : ''}
         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active
-            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
             } ${!isOpen && 'justify-center px-0'}`}
     >
         <Icon className="w-5 h-5 shrink-0" />
@@ -33,11 +34,11 @@ const MainLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [showException, setShowException] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     // Mock User Data
     const username = "Alex";
-    const role = "Supply chain Regional manager";
+    const role = "Supply Chain Regional Manager";
 
     // AI Chat State
     const [chatInput, setChatInput] = useState('');
@@ -56,12 +57,15 @@ const MainLayout = () => {
         setIsChatLoading(true);
 
         try {
-            const res = await fetch('/api/ai/chat', {
+            const res = await fetch(getFullUrl('/api/ai/chat'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: userMessage,
-                    history: chatHistory.map(msg => ({ role: msg.role === 'user' ? 'human' : 'assistant', content: msg.text }))
+                    history: chatHistory.map(msg => ({
+                        role: msg.role === 'user' ? 'human' : 'assistant',
+                        content: msg.text
+                    }))
                 })
             });
             const data = await res.json();
@@ -88,14 +92,9 @@ const MainLayout = () => {
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
-
-
-
             {/* Application Sidebar */}
-            <div className={`bg-white border-r border-gray-200 flex flex-col shrink-0 flex-none z-40 transition-all duration-300 relative ${isSidebarOpen ? 'w-64' : 'w-[84px]'}`}>
-
+            <div className={`bg-white border-r border-gray-200 flex flex-col shrink-0 z-40 transition-all duration-300 relative ${isSidebarOpen ? 'w-64' : 'w-[84px]'}`}>
                 <div className={`py-6 px-4 flex items-center border-b border-gray-100 transition-all ${isSidebarOpen ? 'gap-3' : 'justify-center px-0'}`}>
-
                     {/* Minimal Collapse Toggle (Next to Logo) */}
                     <button
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -160,7 +159,6 @@ const MainLayout = () => {
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 bg-gray-50 relative h-screen">
-
                 {/* Scrollable Content Wrapper */}
                 <div className="flex-1 overflow-y-auto relative flex flex-col">
                     {showException && <ExceptionDashboard onClose={() => setShowException(false)} />}
@@ -184,7 +182,6 @@ const MainLayout = () => {
 
                 {/* Persistent Co-Pilot Chat Bar */}
                 <div className="w-full bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)] z-40 shrink-0 flex flex-col items-center">
-
                     {/* Chat History Area */}
                     {chatHistory.length > 0 && (
                         <div className="w-full max-w-5xl mb-4 max-h-[40vh] overflow-y-auto space-y-3 rounded-xl bg-white border border-gray-100 shadow-sm p-4 animate-in slide-in-from-bottom-2 fade-in">
@@ -243,7 +240,6 @@ const MainLayout = () => {
                     </form>
                 </div>
             </div>
-
         </div>
     );
 };
