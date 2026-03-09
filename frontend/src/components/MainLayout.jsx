@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import ExceptionDashboard from './ExceptionDashboard';
 import {
@@ -34,10 +34,20 @@ const MainLayout = () => {
     const navigate = useNavigate();
     const [showException, setShowException] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [topException, setTopException] = useState(null);
+
+    useEffect(() => {
+        fetch('/api/anomaly/top')
+            .then(res => res.json())
+            .then(data => {
+                if (data) setTopException(data);
+            })
+            .catch(err => console.error("Failed to fetch top exception:", err));
+    }, []);
 
     // Mock User Data
     const username = "Alex";
-    const role = "Supply chain Regional manager";
+    const role = "Plant Supply Chain Manager";
 
     // AI Chat State
     const [chatInput, setChatInput] = useState('');
@@ -163,21 +173,25 @@ const MainLayout = () => {
 
                 {/* Scrollable Content Wrapper */}
                 <div className="flex-1 overflow-y-auto relative flex flex-col">
-                    {showException && <ExceptionDashboard onClose={() => setShowException(false)} />}
+                    {showException && <ExceptionDashboard exception={topException} onClose={() => setShowException(false)} />}
 
                     {/* Top Alert Banner - Global */}
-                    <div className="bg-red-500 text-white px-6 py-2.5 flex items-center justify-between text-sm shadow-sm shrink-0 z-50">
-                        <div className="flex items-center gap-3">
-                            <AlertOctagon className="w-5 h-5 text-red-100" />
-                            <span className="font-semibold tracking-wide">AI AGENT ALERT: Critical ISO Tanker Shortage Detected (AN-2026-001)</span>
+                    {topException && (
+                        <div className={`text-white px-6 py-2.5 flex items-center justify-between text-sm shadow-sm shrink-0 z-50 ${topException.severity === 'Critical' ? 'bg-red-600' : topException.severity === 'High' ? 'bg-red-500' : 'bg-orange-500'}`}>
+                            <div className="flex items-center gap-3">
+                                <AlertOctagon className="w-5 h-5 text-white/90" />
+                                <span className="font-semibold tracking-wide">
+                                    AI AGENT ALERT: {topException.banner_text} ({topException.id})
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => setShowException(true)}
+                                className="bg-white/20 hover:bg-white/30 text-white px-4 py-1 rounded text-xs font-bold transition-colors border border-white/20"
+                            >
+                                Review Exception
+                            </button>
                         </div>
-                        <button
-                            onClick={() => setShowException(true)}
-                            className="bg-white/20 hover:bg-white/30 text-white px-4 py-1 rounded text-xs font-bold transition-colors border border-white/20"
-                        >
-                            Review Exception
-                        </button>
-                    </div>
+                    )}
 
                     <Outlet />
                 </div>

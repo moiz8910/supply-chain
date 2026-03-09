@@ -1,0 +1,11 @@
+production_plan_id
+capacity_reservations
+sku_id
+line_id
+planned_start
+planned_end
+required_quantity
+estimated_scrappage
+quality_defect_rate
+planned_quantity
+status

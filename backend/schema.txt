@@ -1,0 +1,15 @@
+fg_primary_key
+sku_code
+business_unit
+product_family
+product_sub_group
+variant
+spec_1
+spec_2
+spec_3
+form
+packaging
+uom
+plant
+market_eligibility
+regulatory_set_id

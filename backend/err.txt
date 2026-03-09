@@ -1,0 +1,47 @@
+Traceback (most recent call last):
+  File "C:\Users\Kaustubh\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\Kaustubh\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.OperationalError: no such column: pp.plan_start_date
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<string>", line 8, in <module>
+  File "C:\Github Repo\Supply_chain\backend\routers\calendar_router.py", line 151, in get_calendar_events
+    result = conn.execute(text("""
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kaustubh\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\Kaustubh\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\sql\elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kaustubh\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kaustubh\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Kaustubh\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\Kaustubh\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\Kaustubh\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\Kaustubh\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: pp.plan_start_date
+[SQL: 
+            SELECT pp.production_plan_id, pp.sku_id, pp.line_id,
+                   pp.plan_start_date, pp.planned_quantity,
+                   ss.variant as sku_name, ss.product_family
+            FROM production_plan pp
+            LEFT JOIN sales_sku ss ON pp.sku_id = ss.sku_code
+            WHERE pp.plan_start_date IS NOT NULL
+              AND pp.plan_start_date >= date('now', '-30 days')
+              AND pp.plan_start_date <= date('now', '+90 days')
+            ORDER BY pp.plan_start_date DESC LIMIT 30
+        ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

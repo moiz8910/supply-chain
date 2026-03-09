@@ -5,6 +5,7 @@ from routers import anomaly_router
 from routers import ai_router
 from routers import task_router
 from routers import calendar_router
+from routers import map_router
 
 app = FastAPI(title="Supply Chain Control Tower")
 
@@ -13,6 +14,7 @@ app.include_router(anomaly_router.router)
 app.include_router(ai_router.router)
 app.include_router(task_router.router)
 app.include_router(calendar_router.router)
+app.include_router(map_router.router)
 
 # Allow CORS for frontend
 origins = [
