@@ -2,54 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Filter, Search, UserPlus } from 'lucide-react';
 
-const mockTasks = [
-    {
-        id: "TSK-901",
-        title: "Approve Premium Freight (EX-1042)",
-        type: "Exception Approval",
-        priority: "Critical",
-        owner: "L. Kumar",
-        due: "2 Hours",
-        status: "Pending",
-        details: "Authorize $120k premium for guaranteed ISO tanker capacity to maintain OTIF."
-    },
-    {
-        id: "TSK-902",
-        title: "Review Production Schedule Shift",
-        type: "S&OP Action",
-        priority: "High",
-        owner: "Me",
-        due: "Today",
-        status: "Pending",
-        details: "Shift Acetic Acid production from Line 1 to Line 2 due to maintenance."
-    },
-    {
-        id: "TSK-903",
-        title: "Update Customer Delay Comm (Nhava Sheva)",
-        type: "Customer Service",
-        priority: "Medium",
-        owner: "Me",
-        due: "Tomorrow",
-        status: "Pending",
-        details: "Draft and send delay notices for 14 export shipments trapped in congestion."
-    },
-    {
-        id: "TSK-904",
-        title: "Review Spot Purchase Option (Methanol)",
-        type: "Procurement",
-        priority: "High",
-        owner: "S. Gupta",
-        due: "Overdue",
-        status: "Pending",
-        details: "Evaluate spot market rates to mitigate inbound RM delay."
-    }
-];
-
 const TasksScreen = () => {
     const [filter, setFilter] = useState('All Tasks');
     const navigate = useNavigate();
-    const [tasks, setTasks] = useState(mockTasks);
-    const [totalTasks, setTotalTasks] = useState(24);
+    const [tasks, setTasks] = useState([]);
+    const [totalTasks, setTotalTasks] = useState(0);
 
     useEffect(() => {
         fetch('/api/tasks')
@@ -66,8 +23,8 @@ const TasksScreen = () => {
                         status: task.status,
                         details: task.description
                     }));
-                    setTasks([...dynamicTasks, ...mockTasks]);
-                    setTotalTasks(24 + dynamicTasks.length);
+                    setTasks(dynamicTasks);
+                    setTotalTasks(dynamicTasks.length);
                 }
             })
             .catch(err => console.error("Error fetching tasks:", err));
