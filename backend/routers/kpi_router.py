@@ -463,7 +463,7 @@ async def websocket_exceptions(websocket: WebSocket):
                     
                     exceptions_list.append({
                         "id": str(row.get('exception_id', '')),
-                        "title": str(row.get('root_cause_hypotheses', 'System Alert')).split('.')[0],
+                        "title": str(row.get('title')) if pd.notnull(row.get('title')) else f"{str(row.get('exception_type', 'System'))} Alert",
                         "type": str(row.get('exception_type', 'General')),
                         "severity": sev,
                         "timeframe": str(row.get('time_horizon', 'Today')),

@@ -117,7 +117,7 @@ def get_calendar_events():
         result = conn.execute(text("""
             SELECT pr.production_run_id, pr.sku_id, pr.line_id,
                    pr.start_datetime, pr.end_datetime, pr.quantity_produced,
-                   ss.sku_name, ss.product_family
+                   ss.variant as sku_name, ss.product_family
             FROM production_runs pr
             LEFT JOIN sales_sku ss ON pr.sku_id = ss.sku_code
             WHERE pr.start_datetime IS NOT NULL
@@ -150,17 +150,17 @@ def get_calendar_events():
         # 3. Planning: MRP plan milestones
         result = conn.execute(text("""
             SELECT pp.production_plan_id, pp.sku_id, pp.line_id,
-                   pp.plan_start_date, pp.planned_quantity,
-                   ss.sku_name, ss.product_family
+                   pp.planned_start, pp.planned_quantity,
+                   ss.variant as sku_name, ss.product_family
             FROM production_plan pp
             LEFT JOIN sales_sku ss ON pp.sku_id = ss.sku_code
-            WHERE pp.plan_start_date IS NOT NULL
-              AND pp.plan_start_date >= date('now', '-30 days')
-              AND pp.plan_start_date <= date('now', '+90 days')
-            ORDER BY pp.plan_start_date DESC LIMIT 30
+            WHERE pp.planned_start IS NOT NULL
+              AND pp.planned_start >= date('now', '-30 days')
+              AND pp.planned_start <= date('now', '+90 days')
+            ORDER BY pp.planned_start DESC LIMIT 30
         """))
         for row in result.mappings():
-            plan_date = fmt_date(row["plan_start_date"])
+            plan_date = fmt_date(row["planned_start"])
             sku = row["sku_name"] or row["sku_id"] or "SKU"
             fam = row["product_family"] or ""
             if plan_date:

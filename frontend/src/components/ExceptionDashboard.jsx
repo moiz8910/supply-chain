@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, X, ArrowRight, CheckCircle, Clock, Settings2 } from 'lucide-react';
 import { getFullUrl } from '../lib/api';
 
-const ExceptionDashboard = ({ onClose }) => {
+const ExceptionDashboard = ({ exception, onClose }) => {
     const navigate = useNavigate();
     const [anomaly, setAnomaly] = useState(null);
     const [impact, setImpact] = useState(null);
@@ -13,44 +13,68 @@ const ExceptionDashboard = ({ onClose }) => {
     const [approvalLog, setApprovalLog] = useState(null);
 
     useEffect(() => {
-        // Fetch alternatives from the new dynamic AI endpoint
-        const EXCEPTION_ID = "EX-1042"; // Hardcoded for this demo dashboard
+        if (!exception || !exception.id) return;
 
-        // Mock the anomaly context that used to come from /current
-        const mockAnomalyData = {
-            id: EXCEPTION_ID,
-            title: "Critical ISO Tanker Shortage",
-            severity: "High",
-            description: "A sudden shortage of ISO tankers in the EU-West region is preventing the loading of Acetic Acid and Methanol shipments.",
-            affected_products: ["Acetic Acid (Bulk)", "Methanol (Tanker)"],
-            impacted_orders_count: 42,
-            estimated_value_at_risk: "$125,000"
-        };
+        const EXCEPTION_ID = exception.id;
 
-        const mockImpactData = [
-            { kpi: "On-Time In-Full (OTIF)", current: "94.2%", predicted: "82.8%", delta: "-11.4%", status: 'critical' },
-            { kpi: "Lead Time (Days)", current: "4.5", predicted: "7.2", delta: "+2.7", status: 'critical' },
-            { kpi: "Transport Cost/Unit", current: "$142", predicted: "$158", delta: "+$16", status: 'warning' }
-        ];
+        // Fetch Root Cause (Description)
+        const fetchRootCause = fetch(`/api/anomaly/root_cause/${EXCEPTION_ID}`).then(r => r.json());
+        // Fetch Entities & KPIs
+        const fetchEntities = fetch(`/api/anomaly/entities/${EXCEPTION_ID}`).then(r => r.json());
+        // Fetch Alternatives
+        const fetchAlts = fetch(`/api/anomaly/alternatives/${EXCEPTION_ID}`).then(r => r.json());
 
-        setAnomaly(mockAnomalyData);
-        setImpact(mockImpactData);
+        Promise.all([fetchRootCause, fetchEntities, fetchAlts])
+            .then(([rcData, entData, altsData]) => {
 
+<<<<<<< HEAD
         fetch(getFullUrl(`/api/anomaly/alternatives/${EXCEPTION_ID}`))
             .then(res => res.json())
             .then(data => setAlternatives(data))
             .catch(err => console.error("Failed to load anomaly alternatives", err));
     }, []);
+=======
+                const affectedProds = (entData.entities || []).map(e => e.name).slice(0, 3);
+
+                setAnomaly({
+                    id: EXCEPTION_ID,
+                    title: exception.title || "Supply Chain Alert",
+                    severity: exception.severity || "High",
+                    description: rcData.root_cause ? rcData.root_cause : "A critical supply chain exception has been detected.",
+                    affected_products: affectedProds.length > 0 ? affectedProds : ["Multiple Impacted Areas"],
+                    impacted_orders_count: entData.magnitude || "Multiple",
+                    estimated_value_at_risk: "TBD"
+                });
+
+                const kpis = entData.kpi_impact ? entData.kpi_impact.split(',') : ["Overall Delivery", "Cost"];
+                const dynamicImpact = kpis.map(kpi => ({
+                    kpi: kpi.trim(),
+                    current: "Baseline",
+                    predicted: "Risked",
+                    delta: "Negative",
+                    status: exception.severity === 'Critical' ? 'critical' : 'warning'
+                }));
+
+                setImpact(dynamicImpact);
+                setAlternatives(altsData);
+            })
+            .catch(err => console.error("Failed to load dashboard data", err));
+    }, [exception]);
+>>>>>>> affc12c4ec0abbb9d9feed117e687747e8f6f933
 
     const handleApprove = async () => {
-        if (!selectedAlt) return;
+        if (!selectedAlt || !exception) return;
         setStatus('approving');
         try {
+<<<<<<< HEAD
             const EXCEPTION_ID = "EX-1042";
             const res = await fetch(getFullUrl('/api/anomaly/approve'), {
+=======
+            const res = await fetch('/api/anomaly/approve', {
+>>>>>>> affc12c4ec0abbb9d9feed117e687747e8f6f933
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ exception_id: EXCEPTION_ID, alternative_id: selectedAlt })
+                body: JSON.stringify({ exception_id: exception.id, alternative_id: selectedAlt })
             });
             const data = await res.json();
             setApprovalLog(data);
