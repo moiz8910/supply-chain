@@ -5,8 +5,13 @@ import json
 import os
 from typing import List, Dict
 
-# LangChain for AWS Bedrock
-from langchain_aws import ChatBedrockConverse
+# LangChain + Gemini
+from langchain_google_genai import ChatGoogleGenerativeAI
+from dotenv import load_dotenv
+
+# Load .env from the backend directory
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
 from database import engine
 from sqlalchemy import text
 
@@ -244,10 +249,14 @@ def get_alternatives(exception_id: str):
             context = f"Exception ID: {exception_id}\nType: Unknown\nSeverity: High. Assume a generic global supply chain disruption."
 
         # Initialize LLM
-        llm = ChatBedrockConverse(
-            model_id="openai.gpt-oss-120b-1:0",
-            region_name="us-east-1",
-            max_tokens=2048,
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Missing GEMINI_API_KEY environment variable")
+
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            google_api_key=api_key,
+            temperature=0,
         )
 
         prompt = f"""You are an expert supply chain optimization AI.
@@ -326,10 +335,14 @@ def get_root_cause(exception_id: str):
         # Otherwise, generate one using LLM
         context = f"Exception ID: {exception_id}\nType: {ex_row._mapping['exception_type']}\nSeverity: {ex_row._mapping['severity_level']}\nImpacted KPIs: {ex_row._mapping['impacted_kpis']}\nImpacted Entities: {ex_row._mapping['impacted_entities']}\nInitial DB Note: {current_rc}"
 
-        llm = ChatBedrockConverse(
-            model_id="openai.gpt-oss-120b-1:0",
-            region_name="us-east-1",
-            max_tokens=2048,
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="Missing GEMINI_API_KEY environment variable")
+
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            google_api_key=api_key,
+            temperature=0,
         )
 
         prompt = f"""You are an expert supply chain analyst AI. 

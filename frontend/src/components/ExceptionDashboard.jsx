@@ -26,14 +26,6 @@ const ExceptionDashboard = ({ exception, onClose }) => {
 
         Promise.all([fetchRootCause, fetchEntities, fetchAlts])
             .then(([rcData, entData, altsData]) => {
-
-<<<<<<< HEAD
-        fetch(getFullUrl(`/api/anomaly/alternatives/${EXCEPTION_ID}`))
-            .then(res => res.json())
-            .then(data => setAlternatives(data))
-            .catch(err => console.error("Failed to load anomaly alternatives", err));
-    }, []);
-=======
                 const affectedProds = (entData.entities || []).map(e => e.name).slice(0, 3);
 
                 setAnomaly({
@@ -60,18 +52,12 @@ const ExceptionDashboard = ({ exception, onClose }) => {
             })
             .catch(err => console.error("Failed to load dashboard data", err));
     }, [exception]);
->>>>>>> affc12c4ec0abbb9d9feed117e687747e8f6f933
 
     const handleApprove = async () => {
         if (!selectedAlt || !exception) return;
         setStatus('approving');
         try {
-<<<<<<< HEAD
-            const EXCEPTION_ID = "EX-1042";
             const res = await fetch(getFullUrl('/api/anomaly/approve'), {
-=======
-            const res = await fetch('/api/anomaly/approve', {
->>>>>>> affc12c4ec0abbb9d9feed117e687747e8f6f933
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ exception_id: exception.id, alternative_id: selectedAlt })

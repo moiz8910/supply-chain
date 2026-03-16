@@ -1,14 +1,24 @@
 import sqlite3
 import json
-from langchain_aws import ChatBedrockConverse
+import os
+from dotenv import load_dotenv
+
+# Load .env from the backend directory
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
+from langchain_google_genai import ChatGoogleGenerativeAI
 from sqlalchemy import create_engine, text
 
 engine = create_engine("sqlite:///../data/supply_chain.db")
 
-llm = ChatBedrockConverse(
-    model_id="openai.gpt-oss-120b-1:0",
-    region_name="us-east-1",
-    max_tokens=64,
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    raise Exception("Missing GEMINI_API_KEY environment variable")
+
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    google_api_key=api_key,
+    temperature=0.0
 )
 
 def backfill_titles():

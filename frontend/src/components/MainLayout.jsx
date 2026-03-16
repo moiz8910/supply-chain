@@ -34,18 +34,11 @@ const MainLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [showException, setShowException] = useState(false);
-<<<<<<< HEAD
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-    // Mock User Data
-    const username = "Alex";
-    const role = "Supply Chain Regional Manager";
-=======
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [topException, setTopException] = useState(null);
 
     useEffect(() => {
-        fetch('/api/anomaly/top')
+        fetch(getFullUrl('/api/anomaly/top'))
             .then(res => res.json())
             .then(data => {
                 if (data) setTopException(data);
@@ -55,8 +48,7 @@ const MainLayout = () => {
 
     // Mock User Data
     const username = "Alex";
-    const role = "Plant Supply Chain Manager";
->>>>>>> affc12c4ec0abbb9d9feed117e687747e8f6f933
+    const role = "Supply Chain Regional Manager";
 
     // AI Chat State
     const [chatInput, setChatInput] = useState('');

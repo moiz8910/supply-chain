@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
-import { AlertTriangle, TrendingUp, TrendingDown, Clock, CheckCircle, Package, Truck, Search, Filter, MoreVertical, X, ExternalLink, ShieldAlert, Sparkles, MapPin, User, ChevronRight, Eye } from 'lucide-react';
+import { AlertTriangle, TrendingUp, TrendingDown, Clock, CheckCircle, Package, Truck, Search, Filter, MoreVertical, X, ExternalLink, ShieldAlert, Sparkles, MapPin, User, ChevronRight, Eye, AlertCircle, MessageSquare, ClipboardList, FileText, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { getFullUrl, getWsUrl } from '../lib/api';
-=======
-import { AlertCircle, Clock, ChevronRight, MessageSquare, ClipboardList, TrendingDown, Package, User, FileText, X, CheckCircle, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
->>>>>>> affc12c4ec0abbb9d9feed117e687747e8f6f933
 
 
 const ExceptionCard = ({ data, onClick, isSelected }) => (
@@ -80,16 +76,11 @@ const ExceptionsScreen = () => {
         let retryTimer;
 
         const connect = () => {
-<<<<<<< HEAD
             ws = new WebSocket(getWsUrl('/api/ws/exceptions'));
             ws.onopen = () => {
                 console.log('Connected to live exceptions stream');
                 setWsConnected(true);
             };
-=======
-            ws = new WebSocket(wsUrl);
-            ws.onopen = () => { console.log('Connected to live exceptions stream'); setWsConnected(true); };
->>>>>>> affc12c4ec0abbb9d9feed117e687747e8f6f933
             ws.onmessage = (event) => setExceptions(JSON.parse(event.data));
             ws.onclose = () => { console.log('Exceptions socket closed. Reconnecting...'); retryTimer = setTimeout(connect, 3000); };
             ws.onerror = (err) => console.error('Exceptions WebSocket Error:', err);

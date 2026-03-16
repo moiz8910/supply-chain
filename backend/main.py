@@ -15,14 +15,8 @@ from routers import map_router
 async def lifespan(app: FastAPI):
     # Create all DB tables on startup (no-op if tables already exist)
     Base.metadata.create_all(bind=engine)
-    print("✅ Database tables ensured.")
+    print("Database tables ensured.")
     yield
-app.include_router(kpi_router.router)
-app.include_router(anomaly_router.router)
-app.include_router(ai_router.router)
-app.include_router(task_router.router)
-app.include_router(calendar_router.router)
-app.include_router(map_router.router)
 
 
 app = FastAPI(title="Supply Chain Control Tower", lifespan=lifespan)
@@ -31,6 +25,8 @@ app = FastAPI(title="Supply Chain Control Tower", lifespan=lifespan)
 # Include both local dev origins and the deployed Render frontend.
 origins = [
     "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
     "http://localhost:3000",
     "https://supply-chain-1-id8q.onrender.com",
 ]
@@ -49,6 +45,7 @@ app.include_router(anomaly_router.router)
 app.include_router(ai_router.router)
 app.include_router(task_router.router)
 app.include_router(calendar_router.router)
+app.include_router(map_router.router)
 
 
 # ── Core endpoints ────────────────────────────────────────────────────────────
