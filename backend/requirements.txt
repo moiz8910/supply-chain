@@ -4,3 +4,6 @@ sqlalchemy
 pandas
 sqlite-utils
 python-multipart
+python-dotenv
+langchain-google-genai
+langchain-community
